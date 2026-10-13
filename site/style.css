@@ -151,3 +151,4 @@ html.og .v-word{font-size:30px}
 html.og .stats{font-size:15px}
 html.og .ogurl{display:block}
 .ogurl{display:none;margin-top:14px;font:600 16px var(--mono);color:var(--cone)}
+.nw{white-space:nowrap}

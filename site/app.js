@@ -161,7 +161,12 @@ function render(report, idx = 0, animate = !reduce) {
     const li = document.createElement("li");
     li.innerHTML = `<b>${f.level === "error" ? "✗" : f.level === "warn" ? "!" : "·"}</b> `;
     li.append(f.message);
-    if (f.fix) { const fx = document.createElement("span"); fx.className = "fix"; fx.textContent = "→ " + f.fix; li.appendChild(fx); }
+    if (f.fix) {
+      const fx = document.createElement("span"); fx.className = "fix"; fx.append("→ ");
+      // keep flags like --dispatch whole: break only at spaces
+      for (const word of f.fix.split(" ")) { const w2 = document.createElement("span"); w2.className = "nw"; w2.textContent = word; fx.append(w2, " "); }
+      li.appendChild(fx);
+    }
     $("why").appendChild(li);
   }
   setWeights(animate ? {} : st);
@@ -205,11 +210,13 @@ function render(report, idx = 0, animate = !reduce) {
     }
   };
   if (!animate) { draw(now, true); setWeights(st); return; }
-  const dur = Math.min(9000, Math.max(3500, nDays * 1000));
+  // start just before the first slot so the dial never sits empty
+  const start = slots.length ? Math.max(from, slots[0].at - 2 * 3600e3) : from;
+  const dur = Math.min(9000, Math.max(3500, ((now - start) / DAY) * 1000));
   const t0 = performance.now();
   const step = (ts) => {
-    const k = Math.min(1, (ts - t0) / dur);
-    const T = from + (now - from) * k;
+    const k = Math.max(0, Math.min(1, (ts - t0) / dur));
+    const T = start + (now - start) * k;
     draw(T, k === 1);
     if (k < 1) anim = requestAnimationFrame(step);
     else setWeights(st);
