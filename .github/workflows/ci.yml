@@ -29,6 +29,7 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
       - run: npm ci
+      - run: npm run build
       - run: npm run typecheck
       - run: npm test
       - name: dist is up to date

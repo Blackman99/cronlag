@@ -1,0 +1,39 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Configuration — cronlag docs</title><meta name="description" content="Every flag and Action input, thresholds and defaults.">
+<link rel="canonical" href="https://blackman99.github.io/cronlag/docs/configuration.html"><link rel="icon" href="../favicon.svg" type="image/svg+xml"><meta name="theme-color" content="#2e1a12">
+<meta property="og:type" content="article"><meta property="og:site_name" content="cronlag"><meta property="og:url" content="https://blackman99.github.io/cronlag/docs/configuration.html">
+<meta property="og:title" content="cronlag docs — Configuration"><meta property="og:description" content="Every flag and Action input, thresholds and defaults.">
+<meta property="og:image" content="https://blackman99.github.io/cronlag/og.png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:image:alt" content="cronlag: a carved cuckoo clock whose dial shows late and missing cron runs">
+<meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="cronlag docs — Configuration"><meta name="twitter:description" content="Every flag and Action input, thresholds and defaults."><meta name="twitter:image" content="https://blackman99.github.io/cronlag/og.png">
+<link rel="stylesheet" href="docs.css"></head><body>
+<header class="bar"><a class="home" href="../"><img src="../logo.svg" alt="" width="40" height="40"><span>cronlag</span></a><nav><a href="./">Overview</a><a href="install.html">Install</a><a href="usage.html">Usage</a><a href="configuration.html" aria-current="page">Configuration</a><a href="reference.html">Reference</a><a href="faq.html">FAQ</a></nav></header>
+<main class="doc"><h1>Configuration</h1>
+<h2>CLI flags</h2>
+<table><tr><th>Flag</th><th>Default</th><th>Meaning</th></tr>
+<tr><td><code>-d, --days</code></td><td>7</td><td>window to inspect (1–90)</td></tr>
+<tr><td><code>-w, --workflow</code></td><td>all</td><td>only this workflow: file name (<code>nightly.yml</code> or <code>nightly</code>), path, display name or id; repeatable</td></tr>
+<tr><td><code>-f, --format</code></td><td>text</td><td><code>text</code>, <code>json</code>, <code>markdown</code></td></tr>
+<tr><td><code>--fail-on</code></td><td>never</td><td><code>dropped</code>: exit 1 on DROPPING / NOT FIRING / DISABLED / INVALID; <code>late</code>: also LATE</td></tr>
+<tr><td><code>--late</code></td><td>1h</td><td>lag above which a run is "very late" (also the LATE verdict threshold for the median)</td></tr>
+<tr><td><code>--on-time</code></td><td>10m</td><td>lag still counted as on time</td></tr>
+<tr><td><code>--lite</code></td><td>off</td><td>skip the workflow-file history lookup (fewer API calls; cron changes in the window are then not detected)</td></tr>
+<tr><td><code>--grace</code></td><td>15m</td><td>catchup: how long after a slot before it counts as missed</td></tr>
+<tr><td><code>--dispatch</code></td><td>off</td><td>catchup: actually dispatch</td></tr>
+<tr><td><code>--tz</code>, <code>-n</code></td><td>UTC, 5</td><td>explain: timezone and number of fire times</td></tr>
+<tr><td><code>--token</code></td><td>env / gh</td><td>GitHub token</td></tr>
+<tr><td><code>--no-color</code></td><td>auto</td><td>plain output (<code>NO_COLOR</code> and <code>FORCE_COLOR</code> are honored)</td></tr></table>
+<p>Durations accept <code>s</code>, <code>m</code>, <code>h</code>, <code>d</code> (<code>90m</code>, <code>2h</code>).</p>
+<h2>Action inputs</h2>
+<table><tr><th>Input</th><th>Default</th><th></th></tr>
+<tr><td><code>mode</code></td><td>report</td><td><code>report</code> or <code>guard</code></td></tr>
+<tr><td><code>repo</code></td><td>this repo</td><td>owner/repo</td></tr>
+<tr><td><code>days</code></td><td>7</td><td>report window</td></tr>
+<tr><td><code>workflow</code></td><td></td><td>comma-separated file names</td></tr>
+<tr><td><code>fail-on</code></td><td>never</td><td>as the CLI flag</td></tr>
+<tr><td><code>token</code></td><td><code>github.token</code></td><td>needs actions:read</td></tr></table>
+<h2>Fixed rules</h2>
+<ul><li>A run is attributed to a slot at most 24 hours after it (GitHub drops scheduled events queued longer).</li>
+<li>Runs created up to 2 minutes <em>before</em> a slot count for it (clock skew).</li>
+<li>A slot with no run is <b>missed</b> once it is 24h old or a later slot already got its run; until then it is <b>overdue</b>.</li></ul></main>
+<footer class="dfoot"><a href="https://github.com/Blackman99/cronlag">GitHub</a> · <a href="https://github.com/Blackman99/cronlag/issues">Issues</a> · MIT</footer>
+</body></html>

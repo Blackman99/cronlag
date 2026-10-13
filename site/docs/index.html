@@ -1,0 +1,24 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Overview — cronlag docs</title><meta name="description" content="What cronlag answers and how it measures it.">
+<link rel="canonical" href="https://blackman99.github.io/cronlag/docs/"><link rel="icon" href="../favicon.svg" type="image/svg+xml"><meta name="theme-color" content="#2e1a12">
+<meta property="og:type" content="article"><meta property="og:site_name" content="cronlag"><meta property="og:url" content="https://blackman99.github.io/cronlag/docs/">
+<meta property="og:title" content="cronlag docs — Overview"><meta property="og:description" content="What cronlag answers and how it measures it.">
+<meta property="og:image" content="https://blackman99.github.io/cronlag/og.png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:image:alt" content="cronlag: a carved cuckoo clock whose dial shows late and missing cron runs">
+<meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="cronlag docs — Overview"><meta name="twitter:description" content="What cronlag answers and how it measures it."><meta name="twitter:image" content="https://blackman99.github.io/cronlag/og.png">
+<link rel="stylesheet" href="docs.css"></head><body>
+<header class="bar"><a class="home" href="../"><img src="../logo.svg" alt="" width="40" height="40"><span>cronlag</span></a><nav><a href="./" aria-current="page">Overview</a><a href="install.html">Install</a><a href="usage.html">Usage</a><a href="configuration.html">Configuration</a><a href="reference.html">Reference</a><a href="faq.html">FAQ</a></nav></header>
+<main class="doc"><h1>Overview</h1>
+<p class="lead">cronlag tells you, slot by slot, whether your scheduled GitHub Actions workflows ran when their <code>cron:</code> said — how late, which slots never ran, and whether the cause is your setup or GitHub's scheduler. Then it runs the missed slots without double runs.</p>
+<h2>Why</h2>
+<p>Since late August 2026 many repos see scheduled runs created hours late or not at all (<a href="https://github.com/orgs/community/discussions/206019">community #206019</a>, <a href="https://github.com/orgs/community/discussions/206134">#206134</a>, <a href="https://github.com/orgs/community/discussions/210037">#210037</a>). Every thread rebuilds the same table by hand: list the schedule runs, work out which cron slot each belongs to, compute the lag, count the gaps, then walk a checklist of causes. The Actions tab shows none of this — and the REST API doesn't even say which slot a run was for.</p>
+<h2>How it measures</h2>
+<ol>
+<li>Reads every workflow file on the default branch and its commit history, so each period is judged by the cron that was live then (cron changes mid-window are not "missed" slots).</li>
+<li>Expands the cron with GitHub's rules: <code>* , - /</code>, month and day names, day-of-month/day-of-week OR rule, IANA <code>timezone:</code> with DST gaps moved to the next valid time.</li>
+<li>Lists runs with <code>event=schedule</code> and ties each to the closest preceding unclaimed slot within 24 hours.</li>
+<li>Lag = slot → run <em>creation</em>. That happens before any runner is involved, so it is the scheduler. Queue time (creation → start) is reported separately: that one is your runners.</li>
+</ol>
+<pre><code>npx github:Blackman99/cronlag owner/repo</code></pre>
+<p>Next: <a href="install.html">Install</a> · <a href="usage.html">Usage</a></p></main>
+<footer class="dfoot"><a href="https://github.com/Blackman99/cronlag">GitHub</a> · <a href="https://github.com/Blackman99/cronlag/issues">Issues</a> · MIT</footer>
+</body></html>

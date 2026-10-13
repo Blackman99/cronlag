@@ -1,0 +1,26 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Install — cronlag docs</title><meta name="description" content="npx, global install, tokens and permissions.">
+<link rel="canonical" href="https://blackman99.github.io/cronlag/docs/install.html"><link rel="icon" href="../favicon.svg" type="image/svg+xml"><meta name="theme-color" content="#2e1a12">
+<meta property="og:type" content="article"><meta property="og:site_name" content="cronlag"><meta property="og:url" content="https://blackman99.github.io/cronlag/docs/install.html">
+<meta property="og:title" content="cronlag docs — Install"><meta property="og:description" content="npx, global install, tokens and permissions.">
+<meta property="og:image" content="https://blackman99.github.io/cronlag/og.png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:image:alt" content="cronlag: a carved cuckoo clock whose dial shows late and missing cron runs">
+<meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="cronlag docs — Install"><meta name="twitter:description" content="npx, global install, tokens and permissions."><meta name="twitter:image" content="https://blackman99.github.io/cronlag/og.png">
+<link rel="stylesheet" href="docs.css"></head><body>
+<header class="bar"><a class="home" href="../"><img src="../logo.svg" alt="" width="40" height="40"><span>cronlag</span></a><nav><a href="./">Overview</a><a href="install.html" aria-current="page">Install</a><a href="usage.html">Usage</a><a href="configuration.html">Configuration</a><a href="reference.html">Reference</a><a href="faq.html">FAQ</a></nav></header>
+<main class="doc"><h1>Install</h1>
+<h2>Run without installing</h2>
+<pre><code>npx github:Blackman99/cronlag owner/repo</code></pre>
+<p>Requires Node.js 18.17 or newer. The package ships a single bundled file with no runtime dependencies, so <code>npx</code> from GitHub is quick. It is not on the npm registry yet; once it is, <code>npx cronlag</code> will work too.</p>
+<h2>Install</h2>
+<pre><code>npm install -g github:Blackman99/cronlag      # from git
+npm install -g ./cronlag-0.1.0.tgz             # from the release tarball</code></pre>
+<p>Release tarballs: <a href="https://github.com/Blackman99/cronlag/releases/latest">GitHub Releases</a>.</p>
+<h2>Tokens</h2>
+<p>cronlag looks for a token in <code>--token</code>, then <code>GITHUB_TOKEN</code>, then <code>GH_TOKEN</code>, then <code>gh auth token</code>.</p>
+<table><tr><th>What</th><th>Needs</th></tr>
+<tr><td>Report on a public repo</td><td>nothing (60 API calls/hour unauthenticated; a report uses about 2 + 3 per scheduled workflow)</td></tr>
+<tr><td>Report on a private repo</td><td>fine-grained token with <b>Actions: read</b> and <b>Contents: read</b>, or classic <code>repo</code></td></tr>
+<tr><td><code>catchup --dispatch</code></td><td><b>Actions: write</b></td></tr>
+<tr><td>GitHub Action</td><td>the job's <code>GITHUB_TOKEN</code> with <code>actions: read</code> (default for most repos)</td></tr></table></main>
+<footer class="dfoot"><a href="https://github.com/Blackman99/cronlag">GitHub</a> · <a href="https://github.com/Blackman99/cronlag/issues">Issues</a> · MIT</footer>
+</body></html>

@@ -1,0 +1,27 @@
+@font-face{font-family:"Grenze Gotisch";src:url(../fonts/Grenze-Gotisch-wght-800.woff2) format("woff2");font-weight:800;font-display:swap}
+@font-face{font-family:"Alegreya Sans";src:url(../fonts/Alegreya-Sans-wght-400.woff2) format("woff2");font-weight:400;font-display:swap}
+@font-face{font-family:"Alegreya Sans";src:url(../fonts/Alegreya-Sans-wght-700.woff2) format("woff2");font-weight:700;font-display:swap}
+@font-face{font-family:"Spline Sans Mono";src:url(../fonts/Spline-Sans-Mono-wght-400.woff2) format("woff2");font-weight:400;font-display:swap}
+*{box-sizing:border-box}
+html{background:#2e1a12;color:#e9efe6;font:400 18px/1.6 "Alegreya Sans",system-ui,sans-serif}
+body{margin:0}
+a{color:#a9c3dc;text-underline-offset:3px}a:hover{color:#e9efe6}
+.bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px 22px;padding:12px 22px;background:#5a3522;box-shadow:inset 0 -4px 0 #1b0f0a}
+.home{display:flex;align-items:center;gap:8px;text-decoration:none;color:#e9efe6;font:800 30px/1 "Grenze Gotisch",serif}
+.bar nav{display:flex;flex-wrap:wrap;gap:4px 16px;font-size:16px}
+.bar nav a{color:#e9efe6;text-decoration:none;padding:2px 0;border-bottom:3px solid transparent}
+.bar nav a[aria-current]{border-color:#8fb547}
+.doc{max-width:780px;margin:0 auto;padding:26px 22px 40px}
+.doc h1{font:800 54px/1 "Grenze Gotisch",serif;margin:10px 0 18px}
+.doc h2{font:800 30px/1.1 "Grenze Gotisch",serif;margin:34px 0 10px;color:#e9efe6;border-bottom:3px dashed #9a6a3c;padding-bottom:4px}
+.doc p,.doc li{color:rgba(233,239,230,.84)}
+.doc b{color:#e9efe6}
+.lead{font-size:21px}
+code{font-family:"Spline Sans Mono",monospace;font-size:.82em;background:#1b0f0a;padding:.08em .35em;border-radius:3px}
+pre{background:#1b0f0a;border-left:4px solid #9a6a3c;padding:12px 14px;overflow-x:auto;font-size:14px;line-height:1.5}
+pre code{background:none;padding:0;font-size:inherit}
+table{width:100%;border-collapse:collapse;font-size:16px;margin:8px 0 16px}
+th,td{text-align:left;vertical-align:top;padding:7px 8px;border-bottom:1px solid #5a3522}
+th{font-weight:700;color:#e9efe6;border-bottom:3px solid #9a6a3c}
+.dfoot{text-align:center;padding:20px;color:rgba(233,239,230,.7);font-size:15px}
+@media (max-width:600px){.doc h1{font-size:42px}html{font-size:17px}table{font-size:14px}}

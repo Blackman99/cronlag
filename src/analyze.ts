@@ -341,7 +341,7 @@ export function analyzeWorkflow(w: WorkflowInput, snap: Snapshot, t: Thresholds 
       message:
         `Lag is measured from the cron slot to run creation, before any runner is involved — that part is GitHub's scheduler, not your jobs.` +
         (dq !== null && w.dispatchRuns.length ? ` Manual runs of this workflow start ${dq < 60_000 ? "within seconds of" : fmtDur(dq) + " after"} creation (n=${w.dispatchRuns.length}), so runners are fine.` : ""),
-      fix: w.hasDispatch ? `run \`npx cronlag catchup ${snap.repo.fullName} --dispatch\` from an external cron every 10–15 min` : undefined,
+      fix: w.hasDispatch ? `run \`cronlag catchup ${snap.repo.fullName} --dispatch\` from an external cron every 10–15 min` : undefined,
     });
   }
   if (stats.queueMedian !== null && stats.queueMedian > 5 * MIN) {
@@ -441,7 +441,7 @@ export function planCatchup(snap: Snapshot, graceMs = 15 * MIN, t: Thresholds = 
       out.push({ ...base, action: "skip", slot: slotIso, reason: "slot has no run, but the workflow has no workflow_dispatch trigger" });
       continue;
     }
-    out.push({ ...base, action: "dispatch", slot: slotIso, reason: `no run ${fmtDur(snap.now - latest.at)} after the ${new Date(latest.at).toISOString().slice(11, 16)} slot (${latest.cron})` });
+    out.push({ ...base, action: "dispatch", slot: slotIso, reason: `${new Date(latest.at).toISOString().slice(11, 16)} UTC slot (${latest.cron}) has no run after ${fmtDur(snap.now - latest.at)}` });
   }
   return out;
 }

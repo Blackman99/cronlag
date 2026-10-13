@@ -7930,7 +7930,7 @@ function analyzeWorkflow(w, snap, t = DEFAULTS) {
       level: "info",
       code: "scheduler-side",
       message: `Lag is measured from the cron slot to run creation, before any runner is involved \u2014 that part is GitHub's scheduler, not your jobs.` + (dq !== null && w.dispatchRuns.length ? ` Manual runs of this workflow start ${dq < 6e4 ? "within seconds of" : fmtDur(dq) + " after"} creation (n=${w.dispatchRuns.length}), so runners are fine.` : ""),
-      fix: w.hasDispatch ? `run \`npx cronlag catchup ${snap.repo.fullName} --dispatch\` from an external cron every 10\u201315 min` : void 0
+      fix: w.hasDispatch ? `run \`cronlag catchup ${snap.repo.fullName} --dispatch\` from an external cron every 10\u201315 min` : void 0
     });
   }
   if (stats.queueMedian !== null && stats.queueMedian > 5 * MIN) {
@@ -8013,7 +8013,7 @@ function planCatchup(snap, graceMs = 15 * MIN, t = DEFAULTS) {
       out.push({ ...base, action: "skip", slot: slotIso, reason: "slot has no run, but the workflow has no workflow_dispatch trigger" });
       continue;
     }
-    out.push({ ...base, action: "dispatch", slot: slotIso, reason: `no run ${fmtDur(snap.now - latest.at)} after the ${new Date(latest.at).toISOString().slice(11, 16)} slot (${latest.cron})` });
+    out.push({ ...base, action: "dispatch", slot: slotIso, reason: `${new Date(latest.at).toISOString().slice(11, 16)} UTC slot (${latest.cron}) has no run after ${fmtDur(snap.now - latest.at)}` });
   }
   return out;
 }
@@ -8127,10 +8127,22 @@ function slotGlyph(s) {
     }
   }
 }
+function wrap(text, width) {
+  const out = [];
+  let cur = "";
+  for (const word of text.split(" ")) {
+    if (cur && cur.length + 1 + word.length > width) {
+      out.push(cur);
+      cur = word;
+    } else cur = cur ? `${cur} ${word}` : word;
+  }
+  if (cur) out.push(cur);
+  return out;
+}
 var TONE = { "ON TIME": "green", LATE: "yellow", DROPPING: "red", "NOT FIRING": "red", DISABLED: "red", INVALID: "red", "NO DATA": "gray" };
 function formatText(r, o) {
   const c = (k, s) => o.color ? C[k] + s + C.reset : s;
-  const width = Math.max(40, Math.min(o.width ?? 100, 140));
+  const width = Math.max(40, Math.min(o.width ?? 100, 120));
   const lines = [];
   lines.push(`${c("bold", "cronlag")}  ${r.repo}  ${c("dim", `\xB7 last ${r.days} days \xB7 times UTC`)}`);
   if (!r.workflows.length) {
@@ -8153,16 +8165,15 @@ function formatText(r, o) {
     }
     const s = w.stats;
     if (w.slots.length) {
-      lines.push(
-        `  ${s.due} slots \xB7 ${s.ran} ran \xB7 ${s.missed ? c("magenta", `${s.missed} missed`) : "0 missed"}${s.overdue ? ` \xB7 ${c("magenta", `${s.overdue} overdue`)}` : ""}` + (s.ran ? `   lag min ${fmtDur(s.lagMin)} \xB7 median ${c("bold", fmtDur(s.lagMedian))} \xB7 p90 ${fmtDur(s.lagP90)} \xB7 max ${fmtDur(s.lagMax)}   on time ${s.onTime}/${s.ran} \xB7 within 1h ${s.within1h}/${s.ran}` : "")
-      );
+      lines.push(`  ${s.due} slots \xB7 ${s.ran} ran \xB7 ${s.missed ? c("magenta", `${s.missed} missed`) : "0 missed"}${s.overdue ? ` \xB7 ${c("magenta", `${s.overdue} overdue`)}` : ""}${s.ran ? `   on time ${s.onTime}/${s.ran} \xB7 within 1h ${s.within1h}/${s.ran}` : ""}`);
+      if (s.ran) lines.push(`  lag  min ${fmtDur(s.lagMin)} \xB7 median ${c("bold", fmtDur(s.lagMedian))} \xB7 p90 ${fmtDur(s.lagP90)} \xB7 max ${fmtDur(s.lagMax)}${s.queueMedian !== null && s.queueMedian > 6e4 ? `   queue ${fmtDur(s.queueMedian)}` : ""}`);
     }
     const tone = TONE[w.verdict] ?? "gray";
     lines.push(`  ${c(tone, c("bold", w.verdict.padEnd(10)))} ${w.headline}`);
     for (const f of w.findings) {
       const mark = f.level === "error" ? c("red", "\u2717") : f.level === "warn" ? c("yellow", "!") : c("dim", "\xB7");
-      lines.push(`  ${mark} ${f.level === "info" ? c("dim", f.message) : f.message}`);
-      if (f.fix) lines.push(`    ${c("dim", "\u2192")} ${f.fix}`);
+      wrap(f.message, width - 4).forEach((ln, i) => lines.push(`  ${i ? " " : mark} ${f.level === "info" ? c("dim", ln) : ln}`));
+      if (f.fix) wrap(f.fix, width - 6).forEach((ln, i) => lines.push(`    ${i ? " " : c("dim", "\u2192")} ${ln}`));
     }
   }
   if (r.unscheduled.length) {
@@ -8170,7 +8181,7 @@ function formatText(r, o) {
     lines.push(c("dim", `${r.unscheduled.length} other workflow${r.unscheduled.length === 1 ? "" : "s"} without a schedule: ${r.unscheduled.slice(0, 8).join(", ")}${r.unscheduled.length > 8 ? ", \u2026" : ""}`));
   }
   lines.push("");
-  lines.push(c("dim", "legend: bar height = lag \u2581\u22642m \u2582\u226410m \u2583\u226430m \u2584\u22641h \u2585\u22643h \u2586\u22646h \u2587\u226412h \u2588>12h \xB7  green \u226410m \xB7 yellow \u22641h \xB7 red >1h \xB7 \u2715 no run within 24h \xB7 ? no run yet"));
+  lines.push(c("dim", "bar = lag  \u2581\u22642m \u2582\u226410m \u2583\u226430m \u2584\u22641h \u2585\u22643h \u2586\u22646h \u2587\u226412h \u2588>12h   \u2715 no run   ? not yet"));
   return lines.join("\n");
 }
 function mdSlotRow(w) {
@@ -8214,7 +8225,7 @@ function formatCatchup(steps, dispatched, color) {
   if (!steps.length) return "No scheduled workflows.";
   return steps.map((s) => {
     const tag = s.action === "dispatch" ? c("yellow", dispatched ? "DISPATCHED" : "WOULD RUN ") : s.action === "covered" ? c("green", "COVERED   ") : c("dim", "SKIP      ");
-    return `${tag} ${s.file.padEnd(28)} ${s.slot ? c("dim", s.slot) + "  " : ""}${s.reason}`;
+    return `${tag} ${s.file.padEnd(24)} ${s.reason}`;
   }).join("\n");
 }
 function isLateHour(ms) {
@@ -8254,5 +8265,6 @@ export {
   prevFire,
   readTriggers,
   slotGlyph,
-  tzOffset
+  tzOffset,
+  wrap
 };

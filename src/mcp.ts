@@ -97,7 +97,7 @@ export async function callTool(name: string, args: Json, gh: () => GitHub): Prom
     const grace = Math.max(1, Number(args.grace_minutes ?? 15)) * 60_000;
     const snap = await collect(gh(), repo, { days: 2, lite: true });
     void DAY;
-    return { text: JSON.stringify({ repo: snap.repo.fullName, note: "read-only plan; run `npx cronlag catchup <repo> --dispatch` yourself to act on it", steps: planCatchup(snap, grace) }, null, 2) };
+    return { text: JSON.stringify({ repo: snap.repo.fullName, note: "read-only plan; run `cronlag catchup <repo> --dispatch` yourself to act on it", steps: planCatchup(snap, grace) }, null, 2) };
   }
   return { text: `unknown tool ${name}`, isError: true };
 }

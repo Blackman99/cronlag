@@ -1,0 +1,31 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Your cron said 06:00. GitHub ran it at 11:50. — cronlag</title><meta name="description" content="Measuring scheduled GitHub Actions lag slot by slot, telling your bugs from GitHub's, and catching up without double runs.">
+<link rel="canonical" href="https://blackman99.github.io/cronlag/blog/why-is-my-cron-late.html"><link rel="icon" href="../favicon.svg" type="image/svg+xml"><meta name="theme-color" content="#2e1a12">
+<meta property="og:type" content="article"><meta property="og:site_name" content="cronlag"><meta property="og:url" content="https://blackman99.github.io/cronlag/blog/why-is-my-cron-late.html">
+<meta property="og:title" content="Your cron said 06:00. GitHub ran it at 11:50."><meta property="og:description" content="Measuring scheduled GitHub Actions lag slot by slot, telling your bugs from GitHub's, and catching up without double runs.">
+<meta property="og:image" content="https://blackman99.github.io/cronlag/og.png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="Your cron said 06:00. GitHub ran it at 11:50."><meta name="twitter:description" content="Measuring scheduled GitHub Actions lag slot by slot, telling your bugs from GitHub's, and catching up without double runs."><meta name="twitter:image" content="https://blackman99.github.io/cronlag/og.png">
+<link rel="stylesheet" href="../docs/docs.css"></head><body>
+<header class="bar"><a class="home" href="../"><img src="../logo.svg" alt="" width="40" height="40"><span>cronlag</span></a><nav><a href="../docs/">Docs</a><a href="./">Blog</a><a href="https://github.com/Blackman99/cronlag">GitHub</a></nav></header>
+<main class="doc"><p class="meta">2026-10-13</p><h1>Your cron said 06:00. GitHub ran it at 11:50.</h1>
+<p class="lead">Since late August 2026 a lot of <code>on: schedule</code> workflows have been running hours late, or not at all. The community threads (<a href="https://github.com/orgs/community/discussions/206019">#206019</a>, <a href="https://github.com/orgs/community/discussions/206134">#206134</a>, <a href="https://github.com/orgs/community/discussions/210037">#210037</a>) are full of people building the same spreadsheet by hand. cronlag builds it for you.</p>
+<h2>What the numbers look like</h2>
+<p>These are real public repos, measured on 2026-10-13 over the previous week:</p>
+<table><tr><th>Workflow</th><th>cron</th><th>Result</th></tr>
+<tr><td>robhunter/agentdeals <code>reverify.yml</code></td><td><code>0 6 * * *</code></td><td><b>LATE</b>: median 6h37 after the slot, 0 of 6 runs within an hour</td></tr>
+<tr><td>fpgas-online e2e <code>e2e.yml</code></td><td><code>0 */2 * * *</code></td><td><b>DROPPING</b>: 24 of 36 slots in 3 days never got a run</td></tr>
+<tr><td>kort0881 facts generator</td><td>several daily</td><td><b>DROPPING</b>: 17 of 50 missed, median lag 2h39</td></tr></table>
+<p>None of these repos did anything wrong that would explain hours of lag. That is the first question everyone asks, so cronlag answers it explicitly.</p>
+<h2>Why it is hard to see</h2>
+<p>The REST API lists schedule runs but never says which cron slot a run was for. A run created at 11:50 for a <code>0 6 * * *</code> workflow is "a run at 11:50". To get lag you have to expand the cron the way GitHub does (POSIX 5-field, names, the day-of-month/day-of-week OR rule, the 2026 <code>timezone:</code> key with DST gaps), then attribute each run to a slot. And if someone edited the cron last Tuesday, half the "missed" slots are not missed at all.</p>
+<p>cronlag reads the workflow file's commit history to know which cron was live when, ties each run to the closest preceding unclaimed slot within 24 hours, and measures lag to run <em>creation</em>. Creation happens before any runner is involved, so that number belongs to GitHub's scheduler. Queue time (creation to start) is shown separately because that one is about your runners.</p>
+<h2>Is it me or GitHub?</h2>
+<p>Each workflow gets the checklist those threads walk through by hand: disabled after 60 days of inactivity (warned from day 45), disabled manually, archived repo, YAML that doesn't parse, a cron GitHub rejects, intervals under 5 minutes, minute 0 (with a quieter minute suggested), forks, the schedule not on the default branch, no <code>workflow_dispatch</code> to fall back on, and queueing on runners. If all of that is clean and manual runs start in seconds, it says so: the lag is the scheduler.</p>
+<h2>Catch-up without double runs</h2>
+<p><code>cronlag catchup owner/repo --dispatch</code>, run every 10–15 minutes from any cron that isn't GitHub's, dispatches the latest slot that has no run after a 15 minute grace period, once. When GitHub's late run finally shows up, the Action's <code>mode: guard</code> sees that a dispatch already covered that slot and sets <code>skip=true</code>, so your job doesn't run twice.</p>
+<pre><code>npx github:Blackman99/cronlag owner/repo
+npx github:Blackman99/cronlag catchup owner/repo --dispatch</code></pre>
+<p>Also included: <code>--format markdown</code> to paste into an issue, <code>--fail-on dropped</code> for a weekly health check in CI, and an MCP server (<code>cronlag mcp</code>) so an agent can answer "why didn't my nightly run?" from real data. Or <a href="../">try a repo in the browser</a>; it calls the public API from your machine.</p>
+<p><a href="https://github.com/Blackman99/cronlag">github.com/Blackman99/cronlag</a> · MIT</p></main>
+<footer class="dfoot"><a href="https://github.com/Blackman99/cronlag">GitHub</a> · MIT</footer>
+</body></html>

@@ -2,7 +2,7 @@ name: Release
 
 on:
   push:
-    tags: ["v*"]
+    tags: ["v*.*.*"]
 
 permissions:
   contents: write
@@ -16,6 +16,7 @@ jobs:
         with:
           node-version: "24"
       - run: npm ci
+      - run: npm run build
       - run: npm test
       - name: version matches tag
         run: |

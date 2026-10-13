@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>cronlag — did your scheduled GitHub Actions workflow run on time?</title>
+<meta name="description" content="Slot by slot: which cron slots of your scheduled GitHub Actions workflows got a run, how late, which never ran — and whether it's your setup or GitHub's scheduler. CLI, GitHub Action and MCP server.">
+<link rel="canonical" href="https://blackman99.github.io/cronlag/">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="logo-512.png">
+<meta name="theme-color" content="#2e1a12">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="cronlag">
+<meta property="og:url" content="https://blackman99.github.io/cronlag/">
+<meta property="og:title" content="cronlag — your cron said 06:00. GitHub ran it at 11:50.">
+<meta property="og:description" content="Slot-by-slot lag for scheduled GitHub Actions workflows: late runs, dropped slots, and whether it's you or GitHub. Plus catch-up without double runs.">
+<meta property="og:image" content="https://blackman99.github.io/cronlag/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="A carved cuckoo clock whose 24-hour dial shows a week of cron slots: the bird comes out hours late, and some doors never open.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="cronlag — your cron said 06:00. GitHub ran it at 11:50.">
+<meta name="twitter:description" content="Slot-by-slot lag for scheduled GitHub Actions workflows: late runs, dropped slots, and whether it's you or GitHub.">
+<meta name="twitter:image" content="https://blackman99.github.io/cronlag/og.png">
+<link rel="preload" href="fonts/Grenze-Gotisch-wght-800.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/Alegreya-Sans-wght-400.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="style.css">
+<script>if(/[?&]og\b/.test(location.search))document.documentElement.classList.add("og")</script>
+</head>
+<body>
+<a class="skip" href="#how">Skip to how it works</a>
+
+<header class="clock" id="top">
+  <div class="side side-l" aria-live="polite">
+    <h2 class="side-h">Tally of the last slots</h2>
+    <ol class="tally" id="tally"></ol>
+  </div>
+
+  <div class="house-wrap">
+    <svg class="house" id="house" viewBox="0 0 800 840" role="img" aria-labelledby="dial-title dial-desc">
+      <title id="dial-title">24-hour cuckoo-clock dial of cron slots</title>
+      <desc id="dial-desc">Each ring is one day, oldest inside. A peg marks when the cron said to run; the arc runs to when GitHub actually created the run; a hollow ring is a slot that never ran.</desc>
+      <defs>
+        <pattern id="grain" width="160" height="90" patternUnits="userSpaceOnUse">
+          <path d="M0 12 C40 4 80 22 160 10 M0 34 C50 28 90 44 160 30 M0 58 C30 52 110 70 160 54 M0 80 C60 74 100 88 160 78" fill="none" stroke="#5a3522" stroke-opacity=".22" stroke-width="1.2"/>
+        </pattern>
+        <clipPath id="doorway"><path d="M362 262 V196 a38 38 0 0 1 76 0 V262 Z"/></clipPath>
+      </defs>
+      <!-- gable wall -->
+      <path d="M118 330 L400 96 L682 330 Z" fill="#3a2116"/>
+      <path d="M118 330 L400 96 L682 330 Z" fill="url(#grain)"/>
+      <!-- body -->
+      <rect x="120" y="318" width="560" height="508" fill="#3a2116"/>
+      <rect x="120" y="318" width="560" height="508" fill="url(#grain)"/>
+      <rect x="132" y="330" width="536" height="484" fill="none" stroke="#1b0f0a" stroke-width="3"/>
+      <rect x="135" y="333" width="530" height="478" fill="none" stroke="#5a3522" stroke-width="2"/>
+      <g id="carving"></g>
+      <!-- bargeboards (roof) -->
+      <path d="M30 352 L400 36 L770 352 L734 352 L400 82 L66 352 Z" fill="#5a3522"/>
+      <path d="M66 352 L400 82 L734 352 L722 352 L400 94 L78 352 Z" fill="#1b0f0a"/>
+      <g id="roofleaves"></g>
+      <!-- door + bird -->
+      <path d="M352 268 V194 a48 48 0 0 1 96 0 V268 Z" fill="#1b0f0a"/>
+      <g clip-path="url(#doorway)"><rect x="360" y="150" width="80" height="120" fill="#120a06"/></g>
+      <g id="bird" class="bird" aria-hidden="true">
+        <path d="M362 264 C366 238 392 226 418 232 C432 236 436 250 426 258 C412 268 382 270 362 264Z" fill="#6f8fae"/>
+        <path d="M374 258 C384 246 400 242 414 246" fill="none" stroke="#e9efe6" stroke-width="3" stroke-linecap="round" opacity=".7"/>
+        <circle cx="428" cy="226" r="16" fill="#6f8fae"/>
+        <path d="M442 221 L464 226 L442 232 Z" fill="#e3876f"/>
+        <circle cx="433" cy="222" r="3.4" fill="#1b0f0a"/>
+        <rect x="350" y="266" width="100" height="8" rx="2" fill="#9a6a3c"/>
+      </g>
+      <g id="doors">
+        <path class="door door-l" d="M362 262 V196 a38 38 0 0 1 38 -38 V262 Z" fill="#5a3522" stroke="#1b0f0a" stroke-width="2"/>
+        <path class="door door-r" d="M400 262 V158 a38 38 0 0 1 38 38 V262 Z" fill="#5a3522" stroke="#1b0f0a" stroke-width="2"/>
+      </g>
+      <text id="call" class="call" x="400" y="138" text-anchor="middle"></text>
+      <!-- dial -->
+      <circle cx="400" cy="572" r="246" fill="#5a3522"/>
+      <circle cx="400" cy="572" r="240" fill="#1b0f0a"/>
+      <circle cx="400" cy="572" r="234" fill="#e9efe6"/>
+      <g id="numerals"></g>
+      <g id="rings"></g>
+      <g id="arcs"></g>
+      <g id="pegs"></g>
+      <g id="hand" class="hand">
+        <path d="M400 586 L396 572 L398 400 L392 392 L400 366 L408 392 L402 400 L404 572 Z" fill="#2e1a12"/>
+        <circle cx="400" cy="572" r="11" fill="#2e1a12"/><circle cx="400" cy="572" r="4" fill="#9a6a3c"/>
+      </g>
+      <text id="dial-day" class="dial-day" x="400" y="610" text-anchor="middle"></text><text class="dial-day" x="400" y="546" text-anchor="middle">UTC</text>
+    </svg>
+
+    <div class="plank">
+      <h1><span class="wordmark">cronlag</span> <span class="tagline">Your cron said <b id="said">06:00</b>. <span id="got">GitHub ran it at <b>11:50</b>.</span></span></h1>
+      <p class="verdict" id="verdict"><span class="v-word">…</span> <span class="v-line"></span></p>
+      <p class="stats" id="stats"></p>
+      <form class="check" id="check" autocomplete="off">
+        <label for="repo">Wind it up on any public repo</label>
+        <span class="field"><input id="repo" name="repo" placeholder="owner/repo" spellcheck="false" inputmode="url"><button type="submit">Check</button></span>
+      </form>
+      <p class="samples" id="samples"><span>Real repos from the threads:</span></p>
+      <p class="wf" id="wfs" hidden></p>
+      <p class="note" id="note"></p>
+      <p class="ogurl">npx github:Blackman99/cronlag owner/repo</p>
+    </div>
+  </div>
+
+  <div class="side side-r">
+    <h2 class="side-h">Why the bird is late</h2>
+    <ul class="why" id="why"></ul>
+  </div>
+
+  <svg class="drop" id="drop" viewBox="0 0 800 380" aria-hidden="true">
+    <g class="pendulum"><line x1="400" y1="0" x2="400" y2="210" stroke="#9a6a3c" stroke-width="5"/><circle cx="400" cy="232" r="30" fill="#5a3522" stroke="#1b0f0a" stroke-width="4"/><circle cx="400" cy="232" r="14" fill="#9a6a3c"/></g>
+    <g class="weight" id="w-med"><line class="chain" x1="300" y1="0" x2="300" y2="120"/><g class="cone" transform="translate(300 120)"></g><text class="wlabel" x="262" y="150" text-anchor="end"></text></g>
+    <g class="weight" id="w-p90"><line class="chain" x1="500" y1="0" x2="500" y2="160"/><g class="cone" transform="translate(500 160)"></g><text class="wlabel" x="538" y="190"></text></g>
+  </svg>
+</header>
+
+<main>
+  <div class="chain-axis" aria-hidden="true"></div>
+
+  <section class="link l" id="how">
+    <h2>How to read the clock</h2>
+    <p>One ring per day, oldest in the middle. A brass <b>peg</b> is the moment your <code>cron:</code> line said to run. The <b>arc</b> runs clockwise to the moment GitHub actually <em>created</em> the run, where the <b>bird</b> sits — green within 10 minutes, coral within the hour, raspberry beyond. A <b>hollow ring</b> is a slot that never got a run at all.</p>
+    <p>That gap is measured before any runner is involved, so it is GitHub's scheduler, not your job. cronlag reads the run history and the workflow file's commit history through the REST API, rebuilds every slot your cron promised (with GitHub's cron rules and <code>timezone:</code>), and lines the runs up against them.</p>
+  </section>
+
+  <section class="link r" id="run">
+    <h2>Run it</h2>
+    <pre class="cmd"><code>npx github:Blackman99/cronlag robhunter/agentdeals -w reverify.yml</code></pre>
+    <pre class="term" id="term"><code>cronlag  robhunter/agentdeals  · last 7 days · times UTC
+
+reverify.yml  "Daily rolling re-verification"  <i class="c">0 6 * * *</i>
+  <i class="v">▇▇▇▆▇▇?</i>
+  7 slots · 6 ran · 0 missed · <i class="x">1 overdue</i>   on time 0/6 · within 1h 0/6
+  lag  min 5h55 · median <b>6h37</b> · p90 7h38 · max 8h27
+  <i class="l"><b>LATE</b></i>       median run is created 6h37 after its cron slot · 1 overdue now
+  <i class="l">!</i> "0 6 * * *" fires at minute 0, GitHub's busiest minute (its docs recommend another one).
+    → cron: '37 6 * * *'
+  <i class="d">· Lag is measured from the cron slot to run creation, before any runner is involved —
+    that part is GitHub's scheduler, not your jobs.</i>
+    → run `cronlag catchup robhunter/agentdeals --dispatch` from an external cron every 10–15 min</code></pre>
+    <p>No token needed for public repos (60 API calls an hour); with <code>gh auth login</code> or <code>GITHUB_TOKEN</code> it reads private ones too. <code>--format markdown</code> pastes straight into the issue you were about to write by hand.</p>
+  </section>
+
+  <section class="link l" id="why-section">
+    <h2>Is it me or GitHub?</h2>
+    <p>Every thread about missing schedules walks the same checklist. cronlag walks it for you, per workflow:</p>
+    <ul class="checks">
+      <li><b>Disabled after 60 days</b> — public repos with no activity lose their schedules; cronlag warns from day 45 and prints the <code>gh workflow enable</code> line.</li>
+      <li><b>Never registered</b> — no scheduled run since the file last changed, slots later.</li>
+      <li><b>Minute 0</b> — the busiest minute on GitHub; it suggests a quieter one.</li>
+      <li><b>Under 5 minutes</b>, <b>forks</b>, <b>archived repos</b>, invalid cron, no <code>workflow_dispatch</code>.</li>
+      <li><b>Runner queue vs. scheduler</b> — lag before creation is GitHub's; waiting after creation is your runners.</li>
+      <li><b>Cron changed mid-window</b> — old slots are judged by the old cron, from git history.</li>
+    </ul>
+  </section>
+
+  <section class="link r" id="catchup">
+    <h2>Make the bird sing anyway</h2>
+    <p><code>cronlag catchup</code> looks at each schedule's latest due slot. If it has no run after a grace period, <code>--dispatch</code> starts it through <code>workflow_dispatch</code>. Run it every 10–15 minutes from any cron that isn't GitHub's — a server, a Cloudflare Worker, a Raspberry Pi. Slots that already ran are left alone, so it never doubles up.</p>
+<pre class="cmd"><code>*/10 * * * *  GITHUB_TOKEN=… npx -y github:Blackman99/cronlag catchup you/repo --dispatch</code></pre>
+    <p>And when the late scheduled run finally turns up, <code>mode: guard</code> tells it to stand down:</p>
+<pre class="yaml"><code>jobs:
+  guard:
+    runs-on: ubuntu-latest
+    outputs: { skip: ${{ steps.g.outputs.skip }} }
+    steps:
+      - id: g
+        uses: Blackman99/cronlag@v0
+        with: { mode: guard }
+  work:
+    needs: guard
+    if: needs.guard.outputs.skip != 'true'
+    …</code></pre>
+  </section>
+
+  <section class="link l" id="everywhere">
+    <h2>In CI, and for your agent</h2>
+    <p><b>GitHub Action</b> — weekly report into the job summary, fail when slots drop:</p>
+<pre class="yaml"><code>- uses: Blackman99/cronlag@v0
+  with: { days: 7, fail-on: dropped }</code></pre>
+    <p><b>MCP server</b> — agents that babysit scheduled jobs stop re-deriving lag tables from raw run lists. Read-only tools: <code>schedule_report</code>, <code>catchup_plan</code>, <code>cron_explain</code>.</p>
+<pre class="yaml"><code>{ "mcpServers": { "cronlag": { "command": "npx", "args": ["-y", "github:Blackman99/cronlag", "mcp"] } } }</code></pre>
+  </section>
+
+  <footer class="foot">
+    <svg class="logo-sm" viewBox="0 0 120 120" aria-hidden="true"><use href="logo.svg#logo"/></svg>
+    <p><a href="docs/">Docs</a> · <a href="https://github.com/Blackman99/cronlag">GitHub</a> · <a href="blog/">Notes</a> · <a href="https://github.com/Blackman99/cronlag/releases/latest">Release</a> · MIT</p>
+    <p class="small">Data on this page comes from the public GitHub API: samples recorded <span id="gen"></span>, live checks run in your browser.</p>
+  </footer>
+</main>
+<script type="module" src="app.js"></script>
+</body>
+</html>

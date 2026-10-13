@@ -38,11 +38,24 @@ export function slotGlyph(s: Slot): { ch: string; tone: "green" | "yellow" | "re
   }
 }
 
+export function wrap(text: string, width: number): string[] {
+  const out: string[] = [];
+  let cur = "";
+  for (const word of text.split(" ")) {
+    if (cur && cur.length + 1 + word.length > width) {
+      out.push(cur);
+      cur = word;
+    } else cur = cur ? `${cur} ${word}` : word;
+  }
+  if (cur) out.push(cur);
+  return out;
+}
+
 const TONE: Record<string, string> = { "ON TIME": "green", LATE: "yellow", DROPPING: "red", "NOT FIRING": "red", DISABLED: "red", INVALID: "red", "NO DATA": "gray" };
 
 export function formatText(r: Report, o: TextOptions): string {
   const c = (k: keyof typeof C, s: string) => (o.color ? C[k] + s + C.reset : s);
-  const width = Math.max(40, Math.min(o.width ?? 100, 140));
+  const width = Math.max(40, Math.min(o.width ?? 100, 120));
   const lines: string[] = [];
   lines.push(`${c("bold", "cronlag")}  ${r.repo}  ${c("dim", `· last ${r.days} days · times UTC`)}`);
   if (!r.workflows.length) {
@@ -63,17 +76,15 @@ export function formatText(r: Report, o: TextOptions): string {
     }
     const s = w.stats;
     if (w.slots.length) {
-      lines.push(
-        `  ${s.due} slots · ${s.ran} ran · ${s.missed ? c("magenta", `${s.missed} missed`) : "0 missed"}${s.overdue ? ` · ${c("magenta", `${s.overdue} overdue`)}` : ""}` +
-          (s.ran ? `   lag min ${fmtDur(s.lagMin)} · median ${c("bold", fmtDur(s.lagMedian))} · p90 ${fmtDur(s.lagP90)} · max ${fmtDur(s.lagMax)}   on time ${s.onTime}/${s.ran} · within 1h ${s.within1h}/${s.ran}` : ""),
-      );
+      lines.push(`  ${s.due} slots · ${s.ran} ran · ${s.missed ? c("magenta", `${s.missed} missed`) : "0 missed"}${s.overdue ? ` · ${c("magenta", `${s.overdue} overdue`)}` : ""}${s.ran ? `   on time ${s.onTime}/${s.ran} · within 1h ${s.within1h}/${s.ran}` : ""}`);
+      if (s.ran) lines.push(`  lag  min ${fmtDur(s.lagMin)} · median ${c("bold", fmtDur(s.lagMedian))} · p90 ${fmtDur(s.lagP90)} · max ${fmtDur(s.lagMax)}${s.queueMedian !== null && s.queueMedian > 60_000 ? `   queue ${fmtDur(s.queueMedian)}` : ""}`);
     }
     const tone = (TONE[w.verdict] ?? "gray") as keyof typeof C;
     lines.push(`  ${c(tone, c("bold", w.verdict.padEnd(10)))} ${w.headline}`);
     for (const f of w.findings) {
       const mark = f.level === "error" ? c("red", "✗") : f.level === "warn" ? c("yellow", "!") : c("dim", "·");
-      lines.push(`  ${mark} ${f.level === "info" ? c("dim", f.message) : f.message}`);
-      if (f.fix) lines.push(`    ${c("dim", "→")} ${f.fix}`);
+      wrap(f.message, width - 4).forEach((ln, i) => lines.push(`  ${i ? " " : mark} ${f.level === "info" ? c("dim", ln) : ln}`));
+      if (f.fix) wrap(f.fix, width - 6).forEach((ln, i) => lines.push(`    ${i ? " " : c("dim", "→")} ${ln}`));
     }
   }
   if (r.unscheduled.length) {
@@ -81,7 +92,7 @@ export function formatText(r: Report, o: TextOptions): string {
     lines.push(c("dim", `${r.unscheduled.length} other workflow${r.unscheduled.length === 1 ? "" : "s"} without a schedule: ${r.unscheduled.slice(0, 8).join(", ")}${r.unscheduled.length > 8 ? ", …" : ""}`));
   }
   lines.push("");
-  lines.push(c("dim", "legend: bar height = lag ▁≤2m ▂≤10m ▃≤30m ▄≤1h ▅≤3h ▆≤6h ▇≤12h █>12h ·  green ≤10m · yellow ≤1h · red >1h · ✕ no run within 24h · ? no run yet"));
+  lines.push(c("dim", "bar = lag  ▁≤2m ▂≤10m ▃≤30m ▄≤1h ▅≤3h ▆≤6h ▇≤12h █>12h   ✕ no run   ? not yet"));
   return lines.join("\n");
 }
 
@@ -129,7 +140,7 @@ export function formatCatchup(steps: CatchupStep[], dispatched: boolean, color: 
   return steps
     .map((s) => {
       const tag = s.action === "dispatch" ? c("yellow", dispatched ? "DISPATCHED" : "WOULD RUN ") : s.action === "covered" ? c("green", "COVERED   ") : c("dim", "SKIP      ");
-      return `${tag} ${s.file.padEnd(28)} ${s.slot ? c("dim", s.slot) + "  " : ""}${s.reason}`;
+      return `${tag} ${s.file.padEnd(24)} ${s.reason}`;
     })
     .join("\n");
 }

@@ -1,0 +1,51 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reference — cronlag docs</title><meta name="description" content="Verdicts, slot states, cause checks, JSON output, exit codes, MCP tools.">
+<link rel="canonical" href="https://blackman99.github.io/cronlag/docs/reference.html"><link rel="icon" href="../favicon.svg" type="image/svg+xml"><meta name="theme-color" content="#2e1a12">
+<meta property="og:type" content="article"><meta property="og:site_name" content="cronlag"><meta property="og:url" content="https://blackman99.github.io/cronlag/docs/reference.html">
+<meta property="og:title" content="cronlag docs — Reference"><meta property="og:description" content="Verdicts, slot states, cause checks, JSON output, exit codes, MCP tools.">
+<meta property="og:image" content="https://blackman99.github.io/cronlag/og.png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:image:alt" content="cronlag: a carved cuckoo clock whose dial shows late and missing cron runs">
+<meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="cronlag docs — Reference"><meta name="twitter:description" content="Verdicts, slot states, cause checks, JSON output, exit codes, MCP tools."><meta name="twitter:image" content="https://blackman99.github.io/cronlag/og.png">
+<link rel="stylesheet" href="docs.css"></head><body>
+<header class="bar"><a class="home" href="../"><img src="../logo.svg" alt="" width="40" height="40"><span>cronlag</span></a><nav><a href="./">Overview</a><a href="install.html">Install</a><a href="usage.html">Usage</a><a href="configuration.html">Configuration</a><a href="reference.html" aria-current="page">Reference</a><a href="faq.html">FAQ</a></nav></header>
+<main class="doc"><h1>Reference</h1>
+<h2>Verdicts</h2>
+<table><tr><th>Verdict</th><th>When</th></tr>
+<tr><td>ON TIME</td><td>runs exist, median lag ≤ <code>--late</code>, under 25% very late, nothing missed</td></tr>
+<tr><td>LATE</td><td>median lag above <code>--late</code>, or ≥ 25% of runs very late</td></tr>
+<tr><td>DROPPING</td><td>at least one slot missed</td></tr>
+<tr><td>NOT FIRING</td><td>slots came due and no scheduled run was created at all</td></tr>
+<tr><td>DISABLED</td><td>workflow state is not active (e.g. <code>disabled_inactivity</code>)</td></tr>
+<tr><td>INVALID</td><td>no valid cron, or the file does not parse</td></tr>
+<tr><td>NO DATA</td><td>no slot has come due in the window</td></tr></table>
+<h2>Slot states</h2>
+<p><code>ontime</code> (≤ on-time), <code>late</code> (≤ late), <code>verylate</code>, <code>overdue</code> (no run yet), <code>missed</code>, <code>pending</code> (not due yet).</p>
+<h2>Cause checks</h2>
+<table><tr><th>Code</th><th>Meaning</th></tr>
+<tr><td><code>disabled-inactivity</code></td><td>GitHub disabled the workflow after 60 days without repo activity; fix prints <code>gh workflow enable</code></td></tr>
+<tr><td><code>disabled</code></td><td>workflow disabled by hand</td></tr>
+<tr><td><code>inactivity-soon</code></td><td>public repo with no push for 45+ days</td></tr>
+<tr><td><code>not-registered</code></td><td>no scheduled run since the file last changed, 2+ slots ago</td></tr>
+<tr><td><code>top-of-hour</code></td><td>cron fires at minute 0</td></tr>
+<tr><td><code>too-frequent</code></td><td>interval under 5 minutes</td></tr>
+<tr><td><code>bad-cron</code>, <code>yaml</code></td><td>invalid cron line / unparsable file</td></tr>
+<tr><td><code>fork</code>, <code>archived</code></td><td>schedules off in forks until enabled; never in archived repos</td></tr>
+<tr><td><code>no-dispatch</code></td><td>no <code>workflow_dispatch</code>, so missed slots can't be run</td></tr>
+<tr><td><code>scheduler-side</code></td><td>lag happens before creation (GitHub), with the median start delay of manual runs as evidence</td></tr>
+<tr><td><code>queued</code></td><td>runs wait 5+ minutes after creation: runner capacity</td></tr>
+<tr><td><code>timezone</code></td><td>cron evaluated in an IANA timezone</td></tr></table>
+<h2>JSON</h2>
+<pre><code>{ "repo", "repoUrl", "from", "now", "days", "verdict",
+  "workflows": [ { "file", "name", "path", "url", "state", "crons": [{ "cron", "timezone" }],
+    "changes": [{ "at", "crons" }], "hasDispatch", "verdict", "headline",
+    "stats": { "due", "ran", "missed", "overdue", "pending", "onTime", "late", "veryLate", "within1h",
+               "lagMin", "lagMedian", "lagP90", "lagMax", "queueMedian", "dispatchQueueMedian", "extraRuns" },
+    "slots": [ { "at", "cron", "status", "lagMs", "queueMs", "run": { "id", "number", "url", "created", "conclusion" } } ],
+    "findings": [ { "level", "code", "message", "fix" } ] } ],
+  "unscheduled": [ "ci.yml", … ] }</code></pre>
+<p>Times are epoch milliseconds in <code>slots</code>, ISO strings at the top level. Durations are milliseconds.</p>
+<h2>Exit codes</h2>
+<p><code>0</code> ok (or nothing matched <code>--fail-on</code>) · <code>1</code> a workflow matched <code>--fail-on</code> · <code>2</code> usage error / invalid cron · <code>3</code> GitHub API error (rate limit, not found, auth).</p>
+<h2>MCP tools</h2>
+<p><code>schedule_report</code> returns the Markdown report plus compact JSON; <code>catchup_plan</code> returns the steps <code>catchup</code> would take (never dispatches); <code>cron_explain</code> returns next fire times, shortest interval and the minute-0 flag. All are annotated <code>readOnlyHint: true</code>.</p></main>
+<footer class="dfoot"><a href="https://github.com/Blackman99/cronlag">GitHub</a> · <a href="https://github.com/Blackman99/cronlag/issues">Issues</a> · MIT</footer>
+</body></html>

@@ -1,0 +1,24 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FAQ — cronlag docs</title><meta name="description" content="Why runs are late, attribution limits, double runs, private repos.">
+<link rel="canonical" href="https://blackman99.github.io/cronlag/docs/faq.html"><link rel="icon" href="../favicon.svg" type="image/svg+xml"><meta name="theme-color" content="#2e1a12">
+<meta property="og:type" content="article"><meta property="og:site_name" content="cronlag"><meta property="og:url" content="https://blackman99.github.io/cronlag/docs/faq.html">
+<meta property="og:title" content="cronlag docs — FAQ"><meta property="og:description" content="Why runs are late, attribution limits, double runs, private repos.">
+<meta property="og:image" content="https://blackman99.github.io/cronlag/og.png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:image:alt" content="cronlag: a carved cuckoo clock whose dial shows late and missing cron runs">
+<meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="cronlag docs — FAQ"><meta name="twitter:description" content="Why runs are late, attribution limits, double runs, private repos."><meta name="twitter:image" content="https://blackman99.github.io/cronlag/og.png">
+<link rel="stylesheet" href="docs.css"></head><body>
+<header class="bar"><a class="home" href="../"><img src="../logo.svg" alt="" width="40" height="40"><span>cronlag</span></a><nav><a href="./">Overview</a><a href="install.html">Install</a><a href="usage.html">Usage</a><a href="configuration.html">Configuration</a><a href="reference.html">Reference</a><a href="faq.html" aria-current="page">FAQ</a></nav></header>
+<main class="doc"><h1>FAQ</h1>
+<h2>Why are my scheduled runs late?</h2>
+<p>GitHub documents that scheduled workflows can be delayed under load and dropped, especially at the start of the hour. Since late August 2026 the delays have been far larger than usual for many repos, including ones on quiet minutes. cronlag can't make GitHub's scheduler faster; it shows you exactly how late it is, rules out causes on your side, and gives you a catch-up path.</p>
+<h2>How exact is the lag?</h2>
+<p>The API doesn't say which cron slot a run belongs to. cronlag ties each run to the closest preceding unclaimed slot. For daily or few-times-a-day schedules that is exact in practice. For schedules more frequent than the delay (say hourly with 3-hour lag) a run may be tied to a later slot than it really served, so the lag is a <b>lower bound</b> and the missed count an upper bound. <code>mode: guard</code> reports the precise lag of the run it is in.</p>
+<h2>Will catch-up cause double runs?</h2>
+<p>Catch-up only dispatches a slot that has no run after the grace period, and never the same slot twice. If GitHub's delayed run arrives later anyway, add the guard job and it will skip. Without the guard, make the job idempotent (most refresh jobs already are) or use a <code>concurrency</code> group.</p>
+<h2>Does moving off minute 0 help?</h2>
+<p>Sometimes. GitHub recommends it, and cronlag suggests a quieter minute. But the 2026 threads show off-peak schedules (:15, :23, :38, :47) failing too, so measure before and after with <code>cronlag --days 14</code>.</p>
+<h2>Private repos? GitHub Enterprise?</h2>
+<p>Private repos work with a token that has Actions: read. GHES: point the library's <code>GitHub</code> client at your API base (<code>apiBase</code>); a CLI flag is on the roadmap.</p>
+<h2>Is anything sent anywhere?</h2>
+<p>No. The CLI, Action and MCP server talk only to the GitHub API. The landing page's live check runs in your browser against the public API.</p></main>
+<footer class="dfoot"><a href="https://github.com/Blackman99/cronlag">GitHub</a> · <a href="https://github.com/Blackman99/cronlag/issues">Issues</a> · MIT</footer>
+</body></html>
