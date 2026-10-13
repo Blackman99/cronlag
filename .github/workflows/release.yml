@@ -1,0 +1,33 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - run: npm ci
+      - run: npm test
+      - name: version matches tag
+        run: |
+          v=$(node -p "require('./package.json').version")
+          test "v$v" = "${GITHUB_REF_NAME}" || (echo "::error::package.json $v != tag ${GITHUB_REF_NAME}" && exit 1)
+          grep -q "\"$v\"" src/version.ts
+      - run: npm pack
+      - name: smoke-test the tarball
+        run: |
+          mkdir /tmp/t && cd /tmp/t && npm init -y >/dev/null && npm install "$GITHUB_WORKSPACE"/cronlag-*.tgz
+          npx cronlag --version && npx cronlag explain "17 */6 * * *"
+      - uses: softprops/action-gh-release@v3
+        with:
+          files: cronlag-*.tgz
+          generate_release_notes: true

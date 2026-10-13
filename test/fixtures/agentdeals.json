@@ -1,0 +1,477 @@
+{
+ "repo": {
+  "fullName": "robhunter/agentdeals",
+  "defaultBranch": "main",
+  "fork": false,
+  "archived": false,
+  "private": false,
+  "pushedAt": 1791855677000,
+  "url": "https://github.com/robhunter/agentdeals"
+ },
+ "from": 1789287750580,
+ "now": 1791879750580,
+ "workflows": [
+  {
+   "id": 264038452,
+   "name": "Daily rolling re-verification",
+   "path": ".github/workflows/reverify.yml",
+   "state": "active",
+   "url": "https://github.com/robhunter/agentdeals/blob/main/.github/workflows/reverify.yml",
+   "schedules": [
+    {
+     "cron": "0 6 * * *",
+     "timezone": "UTC"
+    }
+   ],
+   "hasDispatch": true,
+   "fileChangedAt": 1791409569000,
+   "timeline": [
+    {
+     "since": 1789083595000,
+     "sha": "2d188a34cfd86e07c9960c8aa5fca20cc8363d4a",
+     "schedules": [
+      {
+       "cron": "0 6 * * *",
+       "timezone": "UTC"
+      }
+     ]
+    }
+   ],
+   "scheduleRuns": [
+    {
+     "id": 34687568731,
+     "number": 165,
+     "event": "schedule",
+     "status": "completed",
+     "conclusion": "failure",
+     "created": 1789207583000,
+     "started": 1789207583000,
+     "url": "https://github.com/robhunter/agentdeals/actions/runs/34687568731"
+    },
+    {
+     "id": 34753559737,
+     "number": 172,
+     "event": "schedule",
+     "status": "completed",
+     "conclusion": "failure",
+     "created": 1789297572000,
+     "started": 1789297572000,
+     "url": "https://github.com/robhunter/agentdeals/actions/runs/34753559737"
+    },
+    {
+     "id": 34840170895,
+     "number": 174,
+     "event": "schedule",
+     "status": "completed",
+     "conclusion": "success",
+     "created": 1789386580000,
+     "started": 1789386580000,
+     "url": "https://github.com/robhunter/agentdeals/actions/runs/34840170895"
+    },
+    {
+     "id": 34961430490,
+     "number": 175,
+     "event": "schedule",
+     "status": "completed",
+     "conclusion": "success",
+     "created": 1789470348000,
+     "started": 1789470348000,
+     "url": "https://github.com/robhunter/agentdeals/actions/runs/34961430490"
+    },
+    {
+     "id": 35087216569,
+     "number": 176,
+     "event": "schedule",
+     "status": "completed",
+     "conclusion": "success",
+     "created": 1789555883000,
+     "started": 1789555883000,
+     "url": "https://github.com/robhunter/agentdeals/actions/runs/35087216569"
+    },
+    {
+     "id": 35213245721,
+     "number": 177,
+     "event": "schedule",
+     "status": "completed",
+     "conclusion": "failure",
+     "created": 1789642711000,
+     "started": 1789642711000,
+     "url": "https://github.com/robhunter/agentdeals/actions/runs/35213245721"
+    },
+    {
+     "id": 35335432679,
+     "number": 179,
+     "event": "schedule",
+     "status": "completed",
+     "conclusion": "success",
+     "created": 1789727715000,
+     "started": 1789727715000,
+     "url": "https://github.com/robhunter/agentdeals/actions/runs/35335432679"
+    },
+    {
+     "id": 35437081612,
+     "number": 180,
+     "event": "schedule",
+     "status": "completed",
+     "conclusion": "success",
+     "created": 1789813165000,
+     "started": 1789813165000,
+     "url": "https://github.com/robhunter/agentdeals/actions/runs/35437081612"
+    },
+    {
+     "id": 35505641058,
+     "number": 181,
+     "event": "schedule",
+     "status": "completed",
+     "conclusion": "failure",
+     "created": 1789900713000,
+     "started": 1789900713000,
+     "url": "https://github.com/robhunter/agentdeals/actions/runs/35505641058"
+    },
+    {
+     "id": 35597160978,
+     "number": 182,
+     "event": "schedule",
+     "status": "completed",
+     "conclusion": "success",
+     "created": 1789992089000,
+     "started": 1789992089000,
+     "url": "https://github.com/robhunter/agentdeals/actions/runs/35597160978"
+    },
+    {
+     "id": 35718874427,
+     "number": 183,
+     "event": "schedule",
+     "status": "completed",
+     "conclusion": "success",
+     "created": 1790074707000,
+     "started": 1790074707000,
+     "url": "https://github.com/robhunter/agentdeals/actions/runs/35718874427"
+    },
+    {
+     "id": 35850773479,
+     "number": 184,
+     "event": "schedule",
+     "status": "completed",
+     "conclusion": "failure",
+     "created": 1790160426000,
+     "started": 1790160426000,
+     "url": "https://github.com/robhunter/agentdeals/actions/runs/35850773479"
+    },
+    {
+     "id": 35991194339,
+     "number": 185,
+     "event": "schedule",
+     "status": "completed",
+     "conclusion": "success",
+     "created": 1790248052000,
+     "started": 1790248052000,
+     "url": "https://github.com/robhunter/agentdeals/actions/runs/35991194339"
+    },
+    {
+     "id": 36127938778,
+     "number": 186,
+     "event": "schedule",
+     "status": "completed",
+     "conclusion": "failure",
+     "created": 1790334623000,
+     "started": 1790334623000,
+     "url": "https://github.com/robhunter/agentdeals/actions/runs/36127938778"
+    },
+    {
+     "id": 36236956523,
+     "number": 189,
+     "event": "schedule",
+     "status": "completed",
+     "conclusion": "success",
+     "created": 1790419787000,
+     "started": 1790419787000,
+     "url": "https://github.com/robhunter/agentdeals/actions/runs/36236956523"
+    },
+    {
+     "id": 36315665226,
+     "number": 190,
+     "event": "schedule",
+     "status": "completed",
+     "conclusion": "failure",
+     "created": 1790508307000,
+     "started": 1790508307000,
+     "url": "https://github.com/robhunter/agentdeals/actions/runs/36315665226"
+    },
+    {
+     "id": 36425069102,
+     "number": 191,
+     "event": "schedule",
+     "status": "completed",
+     "conclusion": "success",
+     "created": 1790600171000,
+     "started": 1790600171000,
+     "url": "https://github.com/robhunter/agentdeals/actions/runs/36425069102"
+    },
+    {
+     "id": 36566187897,
+     "number": 192,
+     "event": "schedule",
+     "status": "completed",
+     "conclusion": "failure",
+     "created": 1790683722000,
+     "started": 1790683722000,
+     "url": "https://github.com/robhunter/agentdeals/actions/runs/36566187897"
+    },
+    {
+     "id": 36711575030,
+     "number": 193,
+     "event": "schedule",
+     "status": "completed",
+     "conclusion": "failure",
+     "created": 1790769360000,
+     "started": 1790769360000,
+     "url": "https://github.com/robhunter/agentdeals/actions/runs/36711575030"
+    },
+    {
+     "id": 36861866482,
+     "number": 195,
+     "event": "schedule",
+     "status": "completed",
+     "conclusion": "failure",
+     "created": 1790857645000,
+     "started": 1790857645000,
+     "url": "https://github.com/robhunter/agentdeals/actions/runs/36861866482"
+    },
+    {
+     "id": 37003549195,
+     "number": 197,
+     "event": "schedule",
+     "status": "completed",
+     "conclusion": "success",
+     "created": 1790942031000,
+     "started": 1790942031000,
+     "url": "https://github.com/robhunter/agentdeals/actions/runs/37003549195"
+    },
+    {
+     "id": 37118609771,
+     "number": 198,
+     "event": "schedule",
+     "status": "completed",
+     "conclusion": "failure",
+     "created": 1791025609000,
+     "started": 1791025609000,
+     "url": "https://github.com/robhunter/agentdeals/actions/runs/37118609771"
+    },
+    {
+     "id": 37199922772,
+     "number": 199,
+     "event": "schedule",
+     "status": "completed",
+     "conclusion": "success",
+     "created": 1791114454000,
+     "started": 1791114454000,
+     "url": "https://github.com/robhunter/agentdeals/actions/runs/37199922772"
+    },
+    {
+     "id": 37318280642,
+     "number": 200,
+     "event": "schedule",
+     "status": "completed",
+     "conclusion": "success",
+     "created": 1791207463000,
+     "started": 1791207463000,
+     "url": "https://github.com/robhunter/agentdeals/actions/runs/37318280642"
+    },
+    {
+     "id": 37465605868,
+     "number": 201,
+     "event": "schedule",
+     "status": "completed",
+     "conclusion": "success",
+     "created": 1791290736000,
+     "started": 1791290736000,
+     "url": "https://github.com/robhunter/agentdeals/actions/runs/37465605868"
+    },
+    {
+     "id": 37622621381,
+     "number": 202,
+     "event": "schedule",
+     "status": "completed",
+     "conclusion": "success",
+     "created": 1791376791000,
+     "started": 1791376791000,
+     "url": "https://github.com/robhunter/agentdeals/actions/runs/37622621381"
+    },
+    {
+     "id": 37779671023,
+     "number": 203,
+     "event": "schedule",
+     "status": "completed",
+     "conclusion": "success",
+     "created": 1791463780000,
+     "started": 1791463780000,
+     "url": "https://github.com/robhunter/agentdeals/actions/runs/37779671023"
+    },
+    {
+     "id": 37930985674,
+     "number": 204,
+     "event": "schedule",
+     "status": "completed",
+     "conclusion": "success",
+     "created": 1791549299000,
+     "started": 1791549299000,
+     "url": "https://github.com/robhunter/agentdeals/actions/runs/37930985674"
+    },
+    {
+     "id": 38050117084,
+     "number": 205,
+     "event": "schedule",
+     "status": "completed",
+     "conclusion": "success",
+     "created": 1791633328000,
+     "started": 1791633328000,
+     "url": "https://github.com/robhunter/agentdeals/actions/runs/38050117084"
+    },
+    {
+     "id": 38138063431,
+     "number": 206,
+     "event": "schedule",
+     "status": "completed",
+     "conclusion": "success",
+     "created": 1791720431000,
+     "started": 1791720431000,
+     "url": "https://github.com/robhunter/agentdeals/actions/runs/38138063431"
+    },
+    {
+     "id": 38262995440,
+     "number": 207,
+     "event": "schedule",
+     "status": "completed",
+     "conclusion": "success",
+     "created": 1791815222000,
+     "started": 1791815222000,
+     "url": "https://github.com/robhunter/agentdeals/actions/runs/38262995440"
+    }
+   ],
+   "dispatchRuns": [
+    {
+     "id": 34692968568,
+     "number": 166,
+     "event": "workflow_dispatch",
+     "status": "completed",
+     "conclusion": "failure",
+     "created": 1789215052000,
+     "started": 1789215052000,
+     "url": "https://github.com/robhunter/agentdeals/actions/runs/34692968568"
+    },
+    {
+     "id": 34698055086,
+     "number": 167,
+     "event": "workflow_dispatch",
+     "status": "completed",
+     "conclusion": "failure",
+     "created": 1789221686000,
+     "started": 1789221686000,
+     "url": "https://github.com/robhunter/agentdeals/actions/runs/34698055086"
+    },
+    {
+     "id": 34710032973,
+     "number": 168,
+     "event": "workflow_dispatch",
+     "status": "completed",
+     "conclusion": "failure",
+     "created": 1789236198000,
+     "started": 1789236198000,
+     "url": "https://github.com/robhunter/agentdeals/actions/runs/34710032973"
+    },
+    {
+     "id": 34710192508,
+     "number": 169,
+     "event": "workflow_dispatch",
+     "status": "completed",
+     "conclusion": "cancelled",
+     "created": 1789236389000,
+     "started": 1789236389000,
+     "url": "https://github.com/robhunter/agentdeals/actions/runs/34710192508"
+    },
+    {
+     "id": 34716142893,
+     "number": 170,
+     "event": "workflow_dispatch",
+     "status": "completed",
+     "conclusion": "success",
+     "created": 1789243629000,
+     "started": 1789243629000,
+     "url": "https://github.com/robhunter/agentdeals/actions/runs/34716142893"
+    },
+    {
+     "id": 34752860417,
+     "number": 171,
+     "event": "workflow_dispatch",
+     "status": "completed",
+     "conclusion": "failure",
+     "created": 1789296587000,
+     "started": 1789296587000,
+     "url": "https://github.com/robhunter/agentdeals/actions/runs/34752860417"
+    },
+    {
+     "id": 34779498546,
+     "number": 173,
+     "event": "workflow_dispatch",
+     "status": "completed",
+     "conclusion": "success",
+     "created": 1789329737000,
+     "started": 1789329737000,
+     "url": "https://github.com/robhunter/agentdeals/actions/runs/34779498546"
+    },
+    {
+     "id": 35278830500,
+     "number": 178,
+     "event": "workflow_dispatch",
+     "status": "completed",
+     "conclusion": "success",
+     "created": 1789681795000,
+     "started": 1789681795000,
+     "url": "https://github.com/robhunter/agentdeals/actions/runs/35278830500"
+    },
+    {
+     "id": 36187022862,
+     "number": 187,
+     "event": "workflow_dispatch",
+     "status": "completed",
+     "conclusion": "success",
+     "created": 1790368741000,
+     "started": 1790368741000,
+     "url": "https://github.com/robhunter/agentdeals/actions/runs/36187022862"
+    },
+    {
+     "id": 36194227156,
+     "number": 188,
+     "event": "workflow_dispatch",
+     "status": "completed",
+     "conclusion": "failure",
+     "created": 1790373406000,
+     "started": 1790373406000,
+     "url": "https://github.com/robhunter/agentdeals/actions/runs/36194227156"
+    },
+    {
+     "id": 36756082661,
+     "number": 194,
+     "event": "workflow_dispatch",
+     "status": "completed",
+     "conclusion": "success",
+     "created": 1790791531000,
+     "started": 1790791531000,
+     "url": "https://github.com/robhunter/agentdeals/actions/runs/36756082661"
+    },
+    {
+     "id": 36867757981,
+     "number": 196,
+     "event": "workflow_dispatch",
+     "status": "completed",
+     "conclusion": "success",
+     "created": 1790860725000,
+     "started": 1790860725000,
+     "url": "https://github.com/robhunter/agentdeals/actions/runs/36867757981"
+    }
+   ]
+  }
+ ],
+ "unscheduled": []
+}

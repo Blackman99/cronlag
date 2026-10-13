@@ -1,0 +1,52 @@
+name: "cronlag — scheduled workflow lag check"
+description: "Report how late or dropped your cron-scheduled workflows are, why, and skip duplicate runs after catch-up."
+author: "Blackman99"
+branding:
+  icon: "clock"
+  color: "green"
+
+inputs:
+  mode:
+    description: "report (slot-by-slot lag report + job summary) or guard (inside a scheduled run: output skip=true if catch-up already ran this slot)"
+    required: false
+    default: "report"
+  repo:
+    description: "owner/repo to report on (default: this repository)"
+    required: false
+    default: ""
+  days:
+    description: "Window to inspect in days (report mode)"
+    required: false
+    default: "7"
+  workflow:
+    description: "Only these workflows (file names, comma-separated)"
+    required: false
+    default: ""
+  fail-on:
+    description: "never | dropped | late — fail the step when a workflow is that bad (report mode)"
+    required: false
+    default: "never"
+  token:
+    description: "Token with actions:read (default: the job's GITHUB_TOKEN)"
+    required: false
+    default: ${{ github.token }}
+
+outputs:
+  verdict:
+    description: "Worst verdict: ON TIME, LATE, DROPPING, NOT FIRING, DISABLED, INVALID, NO DATA or NO SCHEDULES"
+  missed:
+    description: "Total slots with no run in the window"
+  median-lag-minutes:
+    description: "Median lag of the worst workflow, in minutes"
+  json:
+    description: "Compact JSON summary"
+  skip:
+    description: "guard mode: true when this scheduled run's slot was already run by workflow_dispatch"
+  slot:
+    description: "guard mode: the cron slot this run belongs to (UTC)"
+  lag-minutes:
+    description: "guard mode: how late this run was created, in minutes"
+
+runs:
+  using: "node24"
+  main: "dist/action.js"

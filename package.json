@@ -1,0 +1,56 @@
+{
+  "name": "cronlag",
+  "version": "0.1.0",
+  "description": "Is your scheduled GitHub Actions workflow late, dropped, or broken — and is it you or GitHub? Slot-by-slot lag report, cause checks, and missed-slot catch-up.",
+  "type": "module",
+  "bin": {
+    "cronlag": "dist/cli.js"
+  },
+  "main": "dist/index.js",
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "files": [
+    "dist/cli.js",
+    "dist/index.js",
+    "README.md",
+    "LICENSE",
+    "GOAL.md"
+  ],
+  "engines": {
+    "node": ">=18.17"
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "node --import tsx --test test/*.test.ts",
+    "prepare": "node scripts/build.mjs"
+  },
+  "keywords": [
+    "github-actions",
+    "cron",
+    "schedule",
+    "scheduled-workflows",
+    "workflow_dispatch",
+    "monitoring",
+    "mcp",
+    "mcp-server",
+    "cli"
+  ],
+  "author": "Blackman99",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Blackman99/cronlag.git"
+  },
+  "homepage": "https://blackman99.github.io/cronlag/",
+  "bugs": "https://github.com/Blackman99/cronlag/issues",
+  "devDependencies": {
+    "@types/node": "^20.19.0",
+    "cron-parser": "^5.4.0",
+    "esbuild": "^0.25.0",
+    "tsx": "^4.20.0",
+    "typescript": "~5.9.0",
+    "yaml": "^2.8.0"
+  }
+}

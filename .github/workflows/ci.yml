@@ -1,0 +1,90 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        node: ["18", "20", "24"]
+        exclude:
+          - os: macos-latest
+            node: "18"
+          - os: windows-latest
+            node: "18"
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node }}
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - name: dist is up to date
+        if: matrix.os == 'ubuntu-latest' && matrix.node == '24'
+        shell: bash
+        run: git diff --exit-code -- dist site/cronlag.js || (echo "::error::run npm run build and commit dist/" && exit 1)
+
+  live:
+    # The real thing: run the built CLI against the live GitHub API.
+    runs-on: ubuntu-latest
+    needs: test
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - run: npm ci
+      - name: report on this repo (probe.yml runs every hour at :17)
+        run: node dist/cli.js ${{ github.repository }} --days 3 --format json > self.json && node -e "const r=require('./self.json'); const w=r.workflows.find(x=>x.file==='probe.yml'); if(!w) throw new Error('probe.yml not found'); console.log(w.verdict, JSON.stringify(w.stats))"
+      - name: report on public repos from the pain-point threads
+        run: |
+          for r in robhunter/agentdeals fpgas-online/fpgas.online-e2e-tests dongioia/chrlauncher-feed; do
+            node dist/cli.js "$r" --days 7 --lite || exit 1
+          done
+      - name: markdown into the job summary
+        run: node dist/cli.js robhunter/agentdeals --days 14 -w reverify.yml --format markdown >> "$GITHUB_STEP_SUMMARY"
+      - name: catch-up plan (dry run)
+        run: node dist/cli.js catchup ${{ github.repository }}
+      - name: MCP stdio smoke against the live API
+        run: |
+          printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}' \
+            '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"schedule_report","arguments":{"repo":"${{ github.repository }}","days":2}}}' \
+            | node dist/cli.js mcp > mcp.out
+          node -e "const l=require('fs').readFileSync('mcp.out','utf8').trim().split('\n').map(JSON.parse); const r=l.find(x=>x.id===2).result; if(r.isError) throw new Error(r.content[0].text); if(!/probe\.yml/.test(r.content[0].text)) throw new Error('no probe.yml in report'); console.log('ok')"
+      - name: unauthenticated run (public repo, raw file fetch)
+        env:
+          GITHUB_TOKEN: ""
+          GH_TOKEN: ""
+        run: node dist/cli.js robhunter/agentdeals -w reverify.yml --lite --days 3
+
+  action:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v7
+      - id: lag
+        uses: ./
+        with:
+          days: "3"
+      - run: |
+          echo "verdict=${{ steps.lag.outputs.verdict }} missed=${{ steps.lag.outputs.missed }}"
+          test -n "${{ steps.lag.outputs.verdict }}"
+      - id: guard
+        uses: ./
+        with:
+          mode: guard
+      - run: test "${{ steps.guard.outputs.skip }}" = "false"
