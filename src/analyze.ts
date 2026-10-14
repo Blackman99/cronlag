@@ -177,7 +177,8 @@ export function analyzeWorkflow(w: WorkflowInput, snap: Snapshot, t: Thresholds 
   const seen = new Set<number>();
   const segs = w.timeline && w.timeline.length ? w.timeline : [{ since: -Infinity, schedules: w.schedules }];
   segs.forEach((seg, i) => {
-    const start = Math.max(i === 0 ? -Infinity : seg.since, snap.from - t.maxLagMs);
+    // A workflow cannot fire before GitHub registered it: a file added mid-window has no earlier slots.
+    const start = Math.max(i === 0 ? (w.created ?? -Infinity) : seg.since, snap.from - t.maxLagMs);
     const end = Math.min(i + 1 < segs.length ? segs[i + 1].since : Infinity, now);
     if (end <= start) return;
     for (const s of seg.schedules) {

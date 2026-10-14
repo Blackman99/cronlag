@@ -7653,7 +7653,7 @@ var GitHub = class {
       const r = await this.json(
         `/repos/${full}/actions/workflows?per_page=100&page=${page}`
       );
-      for (const w of r.workflows) out.push({ id: w.id, name: w.name, path: w.path, state: w.state, url: w.html_url });
+      for (const w of r.workflows) out.push({ id: w.id, name: w.name, path: w.path, state: w.state, url: w.html_url, created: w.created_at ? Date.parse(w.created_at) : null });
       if (out.length >= r.total_count || r.workflows.length < 100) break;
     }
     return out;
@@ -7774,7 +7774,7 @@ function analyzeWorkflow(w, snap, t = DEFAULTS) {
   const seen = /* @__PURE__ */ new Set();
   const segs = w.timeline && w.timeline.length ? w.timeline : [{ since: -Infinity, schedules: w.schedules }];
   segs.forEach((seg, i) => {
-    const start = Math.max(i === 0 ? -Infinity : seg.since, snap.from - t.maxLagMs);
+    const start = Math.max(i === 0 ? w.created ?? -Infinity : seg.since, snap.from - t.maxLagMs);
     const end = Math.min(i + 1 < segs.length ? segs[i + 1].since : Infinity, now);
     if (end <= start) return;
     for (const s of seg.schedules) {

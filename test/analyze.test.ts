@@ -71,6 +71,31 @@ test("real fixture: kort0881 facts drops slots and runs hours late (discussion #
   assert.match(formatMarkdown(analyze(load("kort-facts.json"))), /\| \[facts\.yml\]/);
 });
 
+test("real fixture: a workflow added mid-window has no slots before GitHub registered it (cronlag probe.yml)", () => {
+  const snap = load("cronlag-probe.json");
+  const wf = snap.workflows[0];
+  const w = analyze(snap).workflows[0];
+  // probe.yml (17 * * * *) was registered 2026-10-13 08:26 UTC inside a 7-day window: first slot is 09:17, not 7 days back.
+  assert.ok(wf.created && wf.created > snap.from);
+  assert.ok(w.slots.every((s) => s.at >= wf.created!), "no slot before the workflow existed");
+  assert.equal(new Date(w.slots[0].at).toISOString(), "2026-10-13T09:17:00.000Z");
+  assert.equal(w.stats.due, 17);
+  assert.equal(w.stats.ran, 3);
+  assert.equal(w.stats.missed, 13);
+  // without the registration time the same data would claim ~164 missed slots
+  delete (wf as any).created;
+  assert.ok(analyze(snap).workflows[0].stats.missed > 150);
+});
+
+test("synthetic: created inside the window limits slots and catch-up", () => {
+  const created = Date.parse("2026-10-13T05:00:00Z");
+  const w = analyze(synth({ created, scheduleRuns: [] }, "2026-10-13T12:00:00Z", 3)).workflows[0];
+  assert.equal(w.slots.length, 1); // only 06:00 on 10-13
+  assert.equal(new Date(w.slots[0].at).toISOString(), "2026-10-13T06:00:00.000Z");
+  const before = analyze(synth({ created: Date.parse("2026-10-13T07:00:00Z") }, "2026-10-13T12:00:00Z", 3)).workflows[0];
+  assert.equal(before.slots.length, 0);
+});
+
 test("attribution: each run claims the closest preceding free slot", () => {
   const slots = ["2026-10-12T06:00Z", "2026-10-12T12:00Z", "2026-10-12T18:00Z"].map((a) => ({ at: Date.parse(a), cron: "x" }));
   const runs = [run(1, "2026-10-12T09:10Z"), run(2, "2026-10-12T21:00Z"), run(3, "2026-10-12T21:05Z")];

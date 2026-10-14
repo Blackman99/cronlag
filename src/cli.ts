@@ -42,6 +42,7 @@ interface Args {
 
 const SHORT: Record<string, string> = { d: "days", w: "workflow", f: "format", h: "help", v: "version", n: "count" };
 const BOOL = new Set(["help", "version", "no-color", "dispatch", "lite", "json"]);
+const VALUED = new Set(["days", "workflow", "format", "count", "fail-on", "late", "on-time", "token", "grace", "tz", "cron"]);
 
 export function parseArgs(argv: string[]): Args {
   const flags: Record<string, string[]> = {};
@@ -55,6 +56,8 @@ export function parseArgs(argv: string[]): Args {
     if (a.startsWith("-") && a.length > 1 && !/^-\d/.test(a)) {
       let [k, v] = a.replace(/^--?/, "").split(/=(.*)/s, 2) as [string, string | undefined];
       if (!a.startsWith("--")) k = SHORT[k] ?? k;
+      // Reject typos and not-yet-supported flags instead of silently reporting a different window.
+      if (!BOOL.has(k) && !VALUED.has(k)) throw new UsageError(`unknown option ${a.split("=")[0]}`);
       if (BOOL.has(k)) {
         (flags[k] ??= []).push("true");
         continue;

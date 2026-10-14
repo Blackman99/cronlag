@@ -19,6 +19,16 @@ test("usage errors exit 2", () => {
   assert.equal(r.status, 2);
 });
 
+test("unknown options are rejected instead of silently ignored", () => {
+  const r = spawnSync(process.execPath, [CLI, "o/r", "--since", "24h"], { encoding: "utf8" });
+  assert.equal(r.status, 2);
+  assert.match(r.stderr, /unknown option --since/);
+  const t = spawnSync(process.execPath, [CLI, "explain", "17 * * * *", "--tzz=UTC"], { encoding: "utf8" });
+  assert.equal(t.status, 2);
+  const ok = spawnSync(process.execPath, [CLI, "explain", "17 * * * *", "--tz=Europe/Berlin", "-n", "1", "--no-color"], { encoding: "utf8" });
+  assert.equal(ok.status, 0, ok.stderr);
+});
+
 test("MCP stdio: initialize, tools/list, cron_explain", async () => {
   const p = spawn(process.execPath, [CLI, "mcp"], { stdio: ["pipe", "pipe", "inherit"] });
   const lines: any[] = [];
