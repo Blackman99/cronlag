@@ -2,6 +2,9 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { mkdtempSync, symlinkSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { parseArgs } from "../src/cli.ts";
 import { sortOrgRepos, exitForOrg, type OrgReport, type OrgRepoSummary } from "../src/org.ts";
 import { formatOrgText, formatOrgMarkdown } from "../src/format.ts";
@@ -27,6 +30,14 @@ test("cronlag org without a name exits 2", () => {
   const r = spawnSync(process.execPath, [CLI, "org"], { encoding: "utf8" });
   assert.equal(r.status, 2, r.stderr);
   assert.match(r.stderr, /org needs a name/);
+});
+
+test("CLI runs when invoked through a symlinked bin (npm/npx install)", { skip: process.platform === "win32" }, () => {
+  const link = join(mkdtempSync(join(tmpdir(), "cronlag-bin-")), "cronlag");
+  symlinkSync(CLI, link);
+  const r = spawnSync(process.execPath, [link, "--version"], { encoding: "utf8" });
+  assert.equal(r.status, 0, r.stderr);
+  assert.match(r.stdout, /\d+\.\d+\.\d+/);
 });
 
 test("help mentions org", () => {

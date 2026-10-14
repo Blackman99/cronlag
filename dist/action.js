@@ -8667,7 +8667,7 @@ __export(cli_exports, {
   parseArgs: () => parseArgs,
   parseDur: () => parseDur
 });
-import { appendFileSync } from "node:fs";
+import { appendFileSync, realpathSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { resolve as resolvePath } from "node:path";
 function parseArgs(argv) {
@@ -8853,6 +8853,19 @@ async function main(argv) {
   else console.log(formatText(report, { color, width: process.stdout.columns }));
   return exitFor(report, one(a, "fail-on") ?? "never");
 }
+function isEntryPoint() {
+  const arg = process.argv[1];
+  if (!arg) return false;
+  const real = (p) => {
+    try {
+      return realpathSync(p);
+    } catch {
+      return p;
+    }
+  };
+  const norm = (p) => process.platform === "win32" ? p.toLowerCase() : p;
+  return norm(real(fileURLToPath(import.meta.url))) === norm(real(resolvePath(arg)));
+}
 var HELP, SHORT, BOOL, VALUED, UsageError, isDirect;
 var init_cli = __esm({
   "src/cli.ts"() {
@@ -8900,7 +8913,7 @@ Docs: https://blackman99.github.io/cronlag/docs/`;
     VALUED = /* @__PURE__ */ new Set(["days", "workflow", "format", "count", "fail-on", "late", "on-time", "token", "grace", "tz", "cron", "org"]);
     UsageError = class extends Error {
     };
-    isDirect = process.argv[1] != null && fileURLToPath(import.meta.url) === resolvePath(process.argv[1]);
+    isDirect = isEntryPoint();
     if (isDirect) {
       main(process.argv.slice(2)).then(
         (code) => process.exit(code),

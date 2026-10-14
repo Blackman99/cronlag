@@ -8586,7 +8586,7 @@ function repoFromGit(cwd = process.cwd()) {
 }
 
 // src/cli.ts
-import { appendFileSync } from "node:fs";
+import { appendFileSync, realpathSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { resolve as resolvePath } from "node:path";
 var HELP = `cronlag ${VERSION} \u2014 is your scheduled GitHub Actions workflow late, dropped, or broken?
@@ -8805,7 +8805,20 @@ async function main(argv) {
   else console.log(formatText(report, { color, width: process.stdout.columns }));
   return exitFor(report, one(a, "fail-on") ?? "never");
 }
-var isDirect = process.argv[1] != null && fileURLToPath(import.meta.url) === resolvePath(process.argv[1]);
+function isEntryPoint() {
+  const arg = process.argv[1];
+  if (!arg) return false;
+  const real = (p) => {
+    try {
+      return realpathSync(p);
+    } catch {
+      return p;
+    }
+  };
+  const norm = (p) => process.platform === "win32" ? p.toLowerCase() : p;
+  return norm(real(fileURLToPath(import.meta.url))) === norm(real(resolvePath(arg)));
+}
+var isDirect = isEntryPoint();
 if (isDirect) {
   main(process.argv.slice(2)).then(
     (code) => process.exit(code),

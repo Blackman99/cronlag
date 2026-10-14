@@ -8,7 +8,7 @@ import { runMcp } from "./mcp.js";
 import { findToken, repoFromGit } from "./token.js";
 import { VERSION } from "./version.js";
 import { readTriggers } from "./workflow.js";
-import { appendFileSync } from "node:fs";
+import { appendFileSync, realpathSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { resolve as resolvePath } from "node:path";
 
@@ -253,7 +253,21 @@ async function main(argv: string[]): Promise<number> {
   return exitFor(report, one(a, "fail-on") ?? "never");
 }
 
-const isDirect = process.argv[1] != null && fileURLToPath(import.meta.url) === resolvePath(process.argv[1]);
+/** True when this file is the process entry point. npm/npx install the bin as a symlink, so compare real paths. */
+function isEntryPoint(): boolean {
+  const arg = process.argv[1];
+  if (!arg) return false;
+  const real = (p: string) => {
+    try {
+      return realpathSync(p);
+    } catch {
+      return p;
+    }
+  };
+  const norm = (p: string) => (process.platform === "win32" ? p.toLowerCase() : p);
+  return norm(real(fileURLToPath(import.meta.url))) === norm(real(resolvePath(arg)));
+}
+const isDirect = isEntryPoint();
 if (isDirect) {
   main(process.argv.slice(2)).then(
     (code) => process.exit(code),
