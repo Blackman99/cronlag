@@ -5,7 +5,7 @@ const BASE = "https://blackman99.github.io/cronlag";
 const pages = [
   ["index", "Overview", "What cronlag answers and how it measures it."],
   ["install", "Install", "npx, global install, tokens and permissions."],
-  ["usage", "Usage", "Report, catch-up, guard, explain, the GitHub Action and the MCP server."],
+  ["usage", "Usage", "Report, org scan, catch-up, guard, explain, the GitHub Action and the MCP server."],
   ["configuration", "Configuration", "Every flag and Action input, thresholds and defaults."],
   ["reference", "Reference", "Verdicts, slot states, cause checks, JSON output, exit codes, MCP tools."],
   ["faq", "FAQ", "Why runs are late, attribution limits, double runs, private repos."],
@@ -46,6 +46,11 @@ usage: `
 cronlag owner/repo --days 14
 cronlag owner/repo -w nightly.yml -f markdown   # paste into an issue</code></pre>
 <p>One block per scheduled workflow: the cron line(s), a strip with one glyph per slot (bar height = lag, <code>✕</code> = no run, <code>?</code> = no run yet), lag min/median/p90/max, on-time and within-1-hour counts, a verdict, and the cause checks with the fix to apply.</p>
+<h2 id="org">Org-wide scan</h2>
+<pre><code>cronlag org my-org
+cronlag --org my-org --days 14 --fail-on late
+cronlag org my-org -f markdown</code></pre>
+<p>Lists every non-archived repo in the org, finds those with <code>on: schedule</code> workflows, runs the same report pipeline on each (in <code>--lite</code> mode for fewer API calls), and prints a compact summary sorted <b>worst first</b>. Text, JSON and Markdown are supported; <code>--fail-on</code> exits 1 if any scanned repo hits the threshold. Progress goes to stderr when the terminal is a TTY. Archived repos are skipped; non-archived forks are still scanned (the fork cause check explains why schedules never fire).</p>
 <h2 id="catchup">Catch-up</h2>
 <pre><code>cronlag catchup owner/repo              # dry run: what would be dispatched
 cronlag catchup owner/repo --dispatch   # do it</code></pre>
@@ -101,6 +106,7 @@ configuration: `
 <tr><td><code>-d, --days</code></td><td>7</td><td>window to inspect (1–90)</td></tr>
 <tr><td><code>-w, --workflow</code></td><td>all</td><td>only this workflow: file name (<code>nightly.yml</code> or <code>nightly</code>), path, display name or id; repeatable</td></tr>
 <tr><td><code>-f, --format</code></td><td>text</td><td><code>text</code>, <code>json</code>, <code>markdown</code></td></tr>
+<tr><td><code>--org</code></td><td></td><td>org-wide scan (same as <code>cronlag org &lt;org&gt;</code>)</td></tr>
 <tr><td><code>--fail-on</code></td><td>never</td><td><code>dropped</code>: exit 1 on DROPPING / NOT FIRING / DISABLED / INVALID; <code>late</code>: also LATE</td></tr>
 <tr><td><code>--late</code></td><td>1h</td><td>lag above which a run is "very late" (also the LATE verdict threshold for the median)</td></tr>
 <tr><td><code>--on-time</code></td><td>10m</td><td>lag still counted as on time</td></tr>

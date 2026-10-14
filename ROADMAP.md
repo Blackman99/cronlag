@@ -11,7 +11,7 @@ Core goal: see [GOAL.md](GOAL.md). Every item below must make that answer more a
 - Output: text, JSON, Markdown; Action job summary + outputs; MCP stdio server (`schedule_report`, `catchup_plan`, `cron_explain`).
 
 ## v0.2 — reach the people who need it
-- Org-wide scan: `cronlag --org <org>` (all repos with schedules, worst first).
+- [x] Org-wide scan (2026-10-14): `cronlag org <org>` and `cronlag --org <org>` — all non-archived repos with schedules, worst first; text/JSON/markdown; `--fail-on` across the org.
 - `--since <date>` and longer windows with caching of run pages.
 - Publish to npm (needs the user's npm account / Trusted Publishing).
 - Ready-made external schedulers for catch-up: `cronlag worker` prints a Cloudflare Worker (cron trigger) and a systemd timer.

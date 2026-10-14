@@ -7696,6 +7696,31 @@ var GitHub = class {
   async dispatch(full, workflowId, ref) {
     await this.request(`/repos/${full}/actions/workflows/${workflowId}/dispatches`, { method: "POST", body: { ref } });
   }
+  /** Paginated org repos. Includes private repos the token can see; skip archived by default. */
+  async orgRepos(org, opts = {}) {
+    const out = [];
+    for (let page = 1; page <= 50; page++) {
+      const r = await this.json(
+        `/orgs/${encodeURIComponent(org)}/repos?per_page=100&page=${page}&type=all&sort=full_name`
+      );
+      for (const x of r) {
+        const item = {
+          fullName: x.full_name,
+          name: x.name,
+          private: !!x.private,
+          fork: !!x.fork,
+          archived: !!x.archived,
+          defaultBranch: x.default_branch,
+          url: x.html_url,
+          pushedAt: Date.parse(x.pushed_at)
+        };
+        if (item.archived && !opts.includeArchived) continue;
+        out.push(item);
+      }
+      if (r.length < 100) break;
+    }
+    return out;
+  }
 };
 function toRun(x) {
   return {
@@ -7957,7 +7982,8 @@ function analyzeWorkflow(w, snap, t = DEFAULTS) {
     findings
   };
 }
-var RANK = { "NOT FIRING": 6, DISABLED: 5, INVALID: 5, DROPPING: 4, LATE: 3, "ON TIME": 1, "NO DATA": 0 };
+var VERDICT_RANK = { "NOT FIRING": 6, DISABLED: 5, INVALID: 5, DROPPING: 4, LATE: 3, "ON TIME": 1, "NO DATA": 0, "NO SCHEDULES": -1 };
+var RANK = VERDICT_RANK;
 function analyze(snap, t = DEFAULTS) {
   const workflows = snap.workflows.map((w) => analyzeWorkflow(w, snap, t));
   workflows.sort((a, b) => (RANK[b.verdict] ?? 0) - (RANK[a.verdict] ?? 0) || a.file.localeCompare(b.file));
@@ -8139,7 +8165,7 @@ function wrap(text, width) {
   if (cur) out.push(cur);
   return out;
 }
-var TONE = { "ON TIME": "green", LATE: "yellow", DROPPING: "red", "NOT FIRING": "red", DISABLED: "red", INVALID: "red", "NO DATA": "gray" };
+var TONE = { "ON TIME": "green", LATE: "yellow", DROPPING: "red", "NOT FIRING": "red", DISABLED: "red", INVALID: "red", "NO DATA": "gray", "NO SCHEDULES": "gray" };
 function formatText(r, o) {
   const c = (k, s) => o.color ? C[k] + s + C.reset : s;
   const width = Math.max(40, Math.min(o.width ?? 100, 120));
@@ -8231,9 +8257,182 @@ function formatCatchup(steps, dispatched, color) {
 function isLateHour(ms) {
   return (ms ?? 0) > HOUR;
 }
+function formatOrgText(r, o) {
+  const c = (k, s) => o.color ? C[k] + s + C.reset : s;
+  const lines = [];
+  lines.push(
+    `${c("bold", "cronlag")}  org/${r.org}  ${c("dim", `\xB7 last ${r.days} days \xB7 ${r.withSchedules} of ${r.scanned} repos have schedules${r.skippedArchived ? ` \xB7 ${r.skippedArchived} archived skipped` : ""} \xB7 times UTC`)}`
+  );
+  if (!r.repos.length) {
+    lines.push("");
+    lines.push("No scheduled workflows found in this org.");
+    return lines.join("\n");
+  }
+  lines.push("");
+  const nameW = Math.min(40, Math.max(16, ...r.repos.map((x) => x.repo.length)));
+  for (const repo of r.repos) {
+    if (repo.error && !repo.workflowCount) {
+      lines.push(`  ${c("gray", "ERROR".padEnd(10))} ${repo.repo.padEnd(nameW)}  ${c("dim", repo.error)}`);
+      continue;
+    }
+    const tone = TONE[repo.verdict] ?? "gray";
+    const w = repo.worst;
+    const stats = w ? `${w.missed ? `${w.missed} missed` : "0 missed"}${w.ran ? ` \xB7 median ${fmtDur(w.lagMedian)}` : ""}${repo.workflowCount > 1 ? ` \xB7 ${repo.workflowCount} workflows` : w ? ` \xB7 ${w.file}` : ""}` : "";
+    lines.push(`  ${c(tone, c("bold", repo.verdict.padEnd(10)))} ${repo.repo.padEnd(nameW)}  ${stats}`);
+    if (repo.workflowCount > 1) {
+      for (const wf of repo.workflows.slice(0, 8)) {
+        const wt = TONE[wf.verdict] ?? "gray";
+        lines.push(
+          `             ${c("dim", "\xB7")} ${c(wt, wf.verdict.padEnd(10))} ${wf.file.padEnd(22)} ${wf.missed ? c("magenta", `${wf.missed} missed`) : "0 missed"}${wf.ran ? ` \xB7 median ${fmtDur(wf.lagMedian)}` : ""}`
+        );
+      }
+      if (repo.workflows.length > 8) lines.push(`             ${c("dim", `\xB7 \u2026 ${repo.workflows.length - 8} more`)}`);
+    }
+  }
+  lines.push("");
+  lines.push(c("dim", "worst first \xB7 org scan uses --lite (no mid-window cron-history lookup)"));
+  return lines.join("\n");
+}
+function formatOrgMarkdown(r) {
+  const out = [];
+  out.push(`### cronlag \u2014 org/${r.org} (last ${r.days} days, UTC)`);
+  out.push("");
+  out.push(`${r.withSchedules} of ${r.scanned} repos have schedules${r.skippedArchived ? `; ${r.skippedArchived} archived skipped` : ""}.`);
+  out.push("");
+  if (!r.repos.length) {
+    out.push("No scheduled workflows found.");
+    return out.join("\n");
+  }
+  out.push("| Repo | Verdict | Workflows | Missed | Median lag | Worst workflow |");
+  out.push("|---|---|---:|---:|---:|---|");
+  for (const repo of r.repos) {
+    if (repo.error && !repo.workflowCount) {
+      out.push(`| [${repo.repo}](${repo.repoUrl}) | **ERROR** | \u2013 | \u2013 | \u2013 | ${repo.error.replace(/\|/g, "")} |`);
+      continue;
+    }
+    const w = repo.worst;
+    out.push(
+      `| [${repo.repo}](${repo.repoUrl}) | **${repo.verdict}** | ${repo.workflowCount} | ${w?.missed ?? "\u2013"}${w?.overdue ? ` (+${w.overdue} overdue)` : ""} | ${fmtDur(w?.lagMedian ?? null)} | ${w ? `\`${w.file}\`` : "\u2013"} |`
+    );
+  }
+  out.push("", `<sub>Worst first. Generated by [cronlag](https://github.com/Blackman99/cronlag) org scan.</sub>`);
+  return out.join("\n");
+}
 
 // src/version.ts
 var VERSION = "0.1.0";
+
+// src/org.ts
+function summarizeWorkflow(w) {
+  const s = w.stats;
+  return {
+    file: w.file,
+    name: w.name,
+    verdict: w.verdict,
+    headline: w.headline,
+    lagMedian: s.lagMedian,
+    lagP90: s.lagP90,
+    lagMax: s.lagMax,
+    missed: s.missed,
+    overdue: s.overdue,
+    due: s.due,
+    ran: s.ran,
+    within1h: s.within1h
+  };
+}
+function sortOrgRepos(repos) {
+  return [...repos].sort(
+    (a, b) => (VERDICT_RANK[b.verdict] ?? 0) - (VERDICT_RANK[a.verdict] ?? 0) || (b.worst?.missed ?? 0) - (a.worst?.missed ?? 0) || (b.worst?.lagMedian ?? 0) - (a.worst?.lagMedian ?? 0) || a.repo.localeCompare(b.repo)
+  );
+}
+async function mapPool(items, concurrency, fn) {
+  const results = new Array(items.length);
+  let next = 0;
+  async function worker() {
+    for (; ; ) {
+      const i = next++;
+      if (i >= items.length) return;
+      results[i] = await fn(items[i], i);
+    }
+  }
+  const n = Math.max(1, Math.min(concurrency, items.length || 1));
+  await Promise.all(Array.from({ length: n }, () => worker()));
+  return results;
+}
+async function scanOrg(gh, org, o = {}) {
+  const days = Math.min(90, Math.max(1, o.days ?? 7));
+  const now = o.now ?? Date.now();
+  const from = now - days * DAY;
+  const skipArchived = o.skipArchived !== false;
+  const concurrency = o.concurrency ?? 2;
+  o.onProgress?.(`listing repos for ${org}`);
+  const all = await gh.orgRepos(org, { includeArchived: true });
+  const skippedArchived = all.filter((r) => r.archived).length;
+  const targets = skipArchived ? all.filter((r) => !r.archived) : all;
+  const scanned = targets.length;
+  const summaries = [];
+  let errors = 0;
+  await mapPool(targets, concurrency, async (repo, i) => {
+    o.onProgress?.(`scanning ${i + 1}/${targets.length} ${repo.fullName}`);
+    try {
+      const snap = await collect(gh, repo.fullName, {
+        days,
+        now,
+        workflows: o.workflows,
+        lite: true
+      });
+      if (!snap.workflows.length) return;
+      const report = analyze(snap, o.thresholds);
+      const workflows = report.workflows.map(summarizeWorkflow);
+      const worst = workflows[0];
+      summaries.push({
+        repo: report.repo,
+        repoUrl: report.repoUrl,
+        private: snap.repo.private,
+        fork: snap.repo.fork,
+        verdict: report.verdict,
+        workflowCount: workflows.length,
+        worst,
+        workflows,
+        report
+      });
+    } catch (e) {
+      errors++;
+      const msg = e instanceof GitHubError ? e.message : e instanceof Error ? e.message : String(e);
+      if (e instanceof GitHubError && (e.status === 404 || e.status === 403)) {
+        o.onProgress?.(`skip ${repo.fullName}: ${msg}`);
+        return;
+      }
+      summaries.push({
+        repo: repo.fullName,
+        repoUrl: repo.url,
+        private: repo.private,
+        fork: repo.fork,
+        verdict: "NO DATA",
+        workflowCount: 0,
+        workflows: [],
+        error: msg
+      });
+    }
+  });
+  const repos = sortOrgRepos(summaries);
+  return {
+    org,
+    from: new Date(from).toISOString(),
+    now: new Date(now).toISOString(),
+    days,
+    scanned,
+    withSchedules: repos.filter((r) => r.workflowCount > 0).length,
+    skippedArchived,
+    errors,
+    repos
+  };
+}
+function exitForOrg(r, failOn) {
+  if (failOn === "never") return 0;
+  const bad = failOn === "late" ? ["LATE", "DROPPING", "NOT FIRING", "DISABLED", "INVALID"] : ["DROPPING", "NOT FIRING", "DISABLED", "INVALID"];
+  return r.repos.some((repo) => bad.includes(repo.verdict)) ? 1 : 0;
+}
 export {
   CronError,
   DAY,
@@ -8242,16 +8441,20 @@ export {
   GitHubError,
   HOUR,
   MIN,
+  VERDICT_RANK,
   VERSION,
   analyze,
   analyzeWorkflow,
   attribute,
   collect,
   describeMinute,
+  exitForOrg,
   firesBetween,
   fmtDur,
   formatCatchup,
   formatMarkdown,
+  formatOrgMarkdown,
+  formatOrgText,
   formatText,
   guard,
   isLateHour,
@@ -8264,7 +8467,9 @@ export {
   planCatchup,
   prevFire,
   readTriggers,
+  scanOrg,
   slotGlyph,
+  sortOrgRepos,
   tzOffset,
   wrap
 };

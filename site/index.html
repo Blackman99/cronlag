@@ -132,10 +132,10 @@
     <pre class="term" id="term"><code>cronlag  robhunter/agentdeals  · last 7 days · times UTC
 
 reverify.yml  "Daily rolling re-verification"  <i class="c">0 6 * * *</i>
-  <i class="v">▇▇▇▆▇▇?</i>
-  7 slots · 6 ran · 0 missed · <i class="x">1 overdue</i>   on time 0/6 · within 1h 0/6
-  lag  min 5h55 · median <b>6h37</b> · p90 7h38 · max 8h27
-  <i class="l"><b>LATE</b></i>       median run is created 6h37 after its cron slot · 1 overdue now
+  <i class="v">▇▇▇▆▇▇▇</i>
+  7 slots · 7 ran · 0 missed   on time 0/7 · within 1h 0/7
+  lag  min 5h55 · median <b>6h40</b> · p90 7h56 · max 8h27
+  <i class="l"><b>LATE</b></i>       median run is created 6h40 after its cron slot
   <i class="l">!</i> "0 6 * * *" fires at minute 0, GitHub's busiest minute (its docs recommend another one).
     → cron: '37 6 * * *'
   <i class="d">· Lag is measured from the cron slot to run creation, before any runner is involved —

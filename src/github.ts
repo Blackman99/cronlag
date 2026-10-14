@@ -174,6 +174,43 @@ export class GitHub {
   async dispatch(full: string, workflowId: number, ref: string): Promise<void> {
     await this.request(`/repos/${full}/actions/workflows/${workflowId}/dispatches`, { method: "POST", body: { ref } });
   }
+
+  /** Paginated org repos. Includes private repos the token can see; skip archived by default. */
+  async orgRepos(org: string, opts: { includeArchived?: boolean } = {}): Promise<OrgRepoListItem[]> {
+    const out: OrgRepoListItem[] = [];
+    for (let page = 1; page <= 50; page++) {
+      const r = await this.json<Record<string, any>[]>(
+        `/orgs/${encodeURIComponent(org)}/repos?per_page=100&page=${page}&type=all&sort=full_name`,
+      );
+      for (const x of r) {
+        const item: OrgRepoListItem = {
+          fullName: x.full_name,
+          name: x.name,
+          private: !!x.private,
+          fork: !!x.fork,
+          archived: !!x.archived,
+          defaultBranch: x.default_branch,
+          url: x.html_url,
+          pushedAt: Date.parse(x.pushed_at),
+        };
+        if (item.archived && !opts.includeArchived) continue;
+        out.push(item);
+      }
+      if (r.length < 100) break;
+    }
+    return out;
+  }
+}
+
+export interface OrgRepoListItem {
+  fullName: string;
+  name: string;
+  private: boolean;
+  fork: boolean;
+  archived: boolean;
+  defaultBranch: string;
+  url: string;
+  pushedAt: number;
 }
 
 function toRun(x: Record<string, any>): Run {

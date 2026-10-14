@@ -1,18 +1,23 @@
 import { analyze, DAY, DEFAULTS, fmtDur, guard, HOUR, MIN, planCatchup, type Report, type Thresholds } from "./analyze.js";
 import { collect } from "./collect.js";
 import { CronError, nextFires, parseCron, minInterval } from "./cron.js";
-import { formatCatchup, formatMarkdown, formatText } from "./format.js";
+import { formatCatchup, formatMarkdown, formatOrgMarkdown, formatOrgText, formatText } from "./format.js";
+import { exitForOrg, scanOrg } from "./org.js";
 import { GitHub, GitHubError } from "./github.js";
 import { runMcp } from "./mcp.js";
 import { findToken, repoFromGit } from "./token.js";
 import { VERSION } from "./version.js";
 import { readTriggers } from "./workflow.js";
-import { appendFileSync } from "node:fs";
+import { appendFileSync, realpathSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { resolve as resolvePath } from "node:path";
 
 const HELP = `cronlag ${VERSION} — is your scheduled GitHub Actions workflow late, dropped, or broken?
 
 Usage
   cronlag [owner/repo] [options]          slot-by-slot lag report (default: this git repo)
+  cronlag org <org> [options]             all repos in an org with schedules, worst first
+  cronlag --org <org> [options]           same as org (flag form)
   cronlag catchup [owner/repo] [--dispatch] [--grace 15m]
                                           find due slots with no run; --dispatch runs them via workflow_dispatch
   cronlag guard                           inside a scheduled run: skip=true if catch-up already ran this slot
@@ -24,6 +29,7 @@ Options
   -d, --days <n>          window to inspect (default 7, max 90)
   -w, --workflow <x>      only this workflow (file, path, name or id); repeatable
   -f, --format <fmt>      text | json | markdown (default text)
+      --org <org>         org-wide scan (same as \`cronlag org <org>\`)
       --fail-on <level>   never | dropped | late   exit 1 when a workflow is that bad (default never)
       --late <dur>        lag that counts as "very late" (default 1h)
       --on-time <dur>     lag still counted as on time (default 10m)
@@ -32,7 +38,8 @@ Options
   -h, --help / -v, --version
 
 Public repos work without a token (60 API calls/hour); private repos need actions:read.
-catchup --dispatch needs actions:write. Docs: https://blackman99.github.io/cronlag/docs/`;
+Org scan skips archived repos and uses --lite for fewer API calls. catchup --dispatch needs actions:write.
+Docs: https://blackman99.github.io/cronlag/docs/`;
 
 interface Args {
   cmd: string;
@@ -42,7 +49,7 @@ interface Args {
 
 const SHORT: Record<string, string> = { d: "days", w: "workflow", f: "format", h: "help", v: "version", n: "count" };
 const BOOL = new Set(["help", "version", "no-color", "dispatch", "lite", "json"]);
-const VALUED = new Set(["days", "workflow", "format", "count", "fail-on", "late", "on-time", "token", "grace", "tz", "cron"]);
+const VALUED = new Set(["days", "workflow", "format", "count", "fail-on", "late", "on-time", "token", "grace", "tz", "cron", "org"]);
 
 export function parseArgs(argv: string[]): Args {
   const flags: Record<string, string[]> = {};
@@ -67,7 +74,7 @@ export function parseArgs(argv: string[]): Args {
       (flags[k] ??= []).push(v);
     } else pos.push(a);
   }
-  const cmds = ["catchup", "guard", "explain", "mcp", "report"];
+  const cmds = ["catchup", "guard", "explain", "mcp", "org", "report"];
   const cmd = pos.length && cmds.includes(pos[0]) ? (pos.shift() as string) : "report";
   return { cmd, pos, flags };
 }
@@ -196,10 +203,28 @@ async function main(argv: string[]): Promise<number> {
     return 0;
   }
 
-  const repo = resolveRepo(a);
   const days = Math.min(90, Math.max(1, Number(one(a, "days") ?? 7)));
   const t = thresholds(a);
   if (!token && process.stderr.isTTY) console.error("(no GitHub token found — public repos only, 60 API calls/hour)");
+
+  const orgName = a.cmd === "org" ? a.pos[0] : one(a, "org");
+  if (a.cmd === "org" || orgName) {
+    if (!orgName) throw new UsageError("org needs a name, e.g. cronlag org github");
+    const progress = process.stderr.isTTY ? (msg: string) => console.error(msg) : undefined;
+    const report = await scanOrg(gh, orgName, {
+      days,
+      workflows: a.flags.workflow,
+      thresholds: t,
+      onProgress: progress,
+    });
+    const format = one(a, "format") ?? (a.flags.json ? "json" : "text");
+    if (format === "json") console.log(JSON.stringify(report, null, 2));
+    else if (format === "markdown" || format === "md") console.log(formatOrgMarkdown(report));
+    else console.log(formatOrgText(report, { color, width: process.stdout.columns }));
+    return exitForOrg(report, one(a, "fail-on") ?? "never");
+  }
+
+  const repo = resolveRepo(a);
 
   if (a.cmd === "catchup") {
     const grace = parseDur(one(a, "grace") ?? "15m");
@@ -228,18 +253,35 @@ async function main(argv: string[]): Promise<number> {
   return exitFor(report, one(a, "fail-on") ?? "never");
 }
 
-main(process.argv.slice(2)).then(
-  (code) => process.exit(code),
-  (e) => {
-    if (e instanceof UsageError) {
-      console.error(`cronlag: ${e.message}\nRun \`cronlag --help\` for usage.`);
-      process.exit(2);
+/** True when this file is the process entry point. npm/npx install the bin as a symlink, so compare real paths. */
+function isEntryPoint(): boolean {
+  const arg = process.argv[1];
+  if (!arg) return false;
+  const real = (p: string) => {
+    try {
+      return realpathSync(p);
+    } catch {
+      return p;
     }
-    if (e instanceof GitHubError) {
-      console.error(`cronlag: ${e.message}`);
+  };
+  const norm = (p: string) => (process.platform === "win32" ? p.toLowerCase() : p);
+  return norm(real(fileURLToPath(import.meta.url))) === norm(real(resolvePath(arg)));
+}
+const isDirect = isEntryPoint();
+if (isDirect) {
+  main(process.argv.slice(2)).then(
+    (code) => process.exit(code),
+    (e) => {
+      if (e instanceof UsageError) {
+        console.error(`cronlag: ${e.message}\nRun \`cronlag --help\` for usage.`);
+        process.exit(2);
+      }
+      if (e instanceof GitHubError) {
+        console.error(`cronlag: ${e.message}`);
+        process.exit(3);
+      }
+      console.error(e);
       process.exit(3);
-    }
-    console.error(e);
-    process.exit(3);
-  },
-);
+    },
+  );
+}
