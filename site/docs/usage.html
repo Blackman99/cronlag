@@ -1,10 +1,10 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Usage — cronlag docs</title><meta name="description" content="Report, catch-up, guard, explain, the GitHub Action and the MCP server.">
+<title>Usage — cronlag docs</title><meta name="description" content="Report, org scan, catch-up, guard, explain, the GitHub Action and the MCP server.">
 <link rel="canonical" href="https://blackman99.github.io/cronlag/docs/usage.html"><link rel="icon" href="../favicon.svg" type="image/svg+xml"><meta name="theme-color" content="#2e1a12">
 <meta property="og:type" content="article"><meta property="og:site_name" content="cronlag"><meta property="og:url" content="https://blackman99.github.io/cronlag/docs/usage.html">
-<meta property="og:title" content="cronlag docs — Usage"><meta property="og:description" content="Report, catch-up, guard, explain, the GitHub Action and the MCP server.">
+<meta property="og:title" content="cronlag docs — Usage"><meta property="og:description" content="Report, org scan, catch-up, guard, explain, the GitHub Action and the MCP server.">
 <meta property="og:image" content="https://blackman99.github.io/cronlag/og.png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:image:alt" content="cronlag: a carved cuckoo clock whose dial shows late and missing cron runs">
-<meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="cronlag docs — Usage"><meta name="twitter:description" content="Report, catch-up, guard, explain, the GitHub Action and the MCP server."><meta name="twitter:image" content="https://blackman99.github.io/cronlag/og.png">
+<meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="cronlag docs — Usage"><meta name="twitter:description" content="Report, org scan, catch-up, guard, explain, the GitHub Action and the MCP server."><meta name="twitter:image" content="https://blackman99.github.io/cronlag/og.png">
 <link rel="stylesheet" href="docs.css"></head><body>
 <header class="bar"><a class="home" href="../"><img src="../logo.svg" alt="" width="40" height="40"><span>cronlag</span></a><nav><a href="./">Overview</a><a href="install.html">Install</a><a href="usage.html" aria-current="page">Usage</a><a href="configuration.html">Configuration</a><a href="reference.html">Reference</a><a href="faq.html">FAQ</a></nav></header>
 <main class="doc"><h1>Usage</h1>
@@ -13,6 +13,11 @@
 cronlag owner/repo --days 14
 cronlag owner/repo -w nightly.yml -f markdown   # paste into an issue</code></pre>
 <p>One block per scheduled workflow: the cron line(s), a strip with one glyph per slot (bar height = lag, <code>✕</code> = no run, <code>?</code> = no run yet), lag min/median/p90/max, on-time and within-1-hour counts, a verdict, and the cause checks with the fix to apply.</p>
+<h2 id="org">Org-wide scan</h2>
+<pre><code>cronlag org my-org
+cronlag --org my-org --days 14 --fail-on late
+cronlag org my-org -f markdown</code></pre>
+<p>Lists every non-archived repo in the org, finds those with <code>on: schedule</code> workflows, runs the same report pipeline on each (in <code>--lite</code> mode for fewer API calls), and prints a compact summary sorted <b>worst first</b>. Text, JSON and Markdown are supported; <code>--fail-on</code> exits 1 if any scanned repo hits the threshold. Progress goes to stderr when the terminal is a TTY. Archived repos are skipped; non-archived forks are still scanned (the fork cause check explains why schedules never fire).</p>
 <h2 id="catchup">Catch-up</h2>
 <pre><code>cronlag catchup owner/repo              # dry run: what would be dispatched
 cronlag catchup owner/repo --dispatch   # do it</code></pre>

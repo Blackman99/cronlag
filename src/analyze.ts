@@ -371,7 +371,9 @@ export function analyzeWorkflow(w: WorkflowInput, snap: Snapshot, t: Thresholds 
   };
 }
 
-const RANK: Record<string, number> = { "NOT FIRING": 6, DISABLED: 5, INVALID: 5, DROPPING: 4, LATE: 3, "ON TIME": 1, "NO DATA": 0 };
+/** Higher = worse. Used to sort workflows and org repos. */
+export const VERDICT_RANK: Record<string, number> = { "NOT FIRING": 6, DISABLED: 5, INVALID: 5, DROPPING: 4, LATE: 3, "ON TIME": 1, "NO DATA": 0, "NO SCHEDULES": -1 };
+const RANK = VERDICT_RANK;
 
 export function analyze(snap: Snapshot, t: Thresholds = DEFAULTS): Report {
   const workflows = snap.workflows.map((w) => analyzeWorkflow(w, snap, t));

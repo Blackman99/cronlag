@@ -13,6 +13,7 @@
 <tr><td><code>-d, --days</code></td><td>7</td><td>window to inspect (1–90)</td></tr>
 <tr><td><code>-w, --workflow</code></td><td>all</td><td>only this workflow: file name (<code>nightly.yml</code> or <code>nightly</code>), path, display name or id; repeatable</td></tr>
 <tr><td><code>-f, --format</code></td><td>text</td><td><code>text</code>, <code>json</code>, <code>markdown</code></td></tr>
+<tr><td><code>--org</code></td><td></td><td>org-wide scan (same as <code>cronlag org &lt;org&gt;</code>)</td></tr>
 <tr><td><code>--fail-on</code></td><td>never</td><td><code>dropped</code>: exit 1 on DROPPING / NOT FIRING / DISABLED / INVALID; <code>late</code>: also LATE</td></tr>
 <tr><td><code>--late</code></td><td>1h</td><td>lag above which a run is "very late" (also the LATE verdict threshold for the median)</td></tr>
 <tr><td><code>--on-time</code></td><td>10m</td><td>lag still counted as on time</td></tr>
