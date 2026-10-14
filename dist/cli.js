@@ -7595,7 +7595,7 @@ function analyzeWorkflow(w, snap, t = DEFAULTS) {
   const seen = /* @__PURE__ */ new Set();
   const segs = w.timeline && w.timeline.length ? w.timeline : [{ since: -Infinity, schedules: w.schedules }];
   segs.forEach((seg, i) => {
-    const start = Math.max(i === 0 ? -Infinity : seg.since, snap.from - t.maxLagMs);
+    const start = Math.max(i === 0 ? w.created ?? -Infinity : seg.since, snap.from - t.maxLagMs);
     const end = Math.min(i + 1 < segs.length ? segs[i + 1].since : Infinity, now);
     if (end <= start) return;
     for (const s of seg.schedules) {
@@ -8170,7 +8170,7 @@ var GitHub = class {
       const r = await this.json(
         `/repos/${full}/actions/workflows?per_page=100&page=${page}`
       );
-      for (const w of r.workflows) out.push({ id: w.id, name: w.name, path: w.path, state: w.state, url: w.html_url });
+      for (const w of r.workflows) out.push({ id: w.id, name: w.name, path: w.path, state: w.state, url: w.html_url, created: w.created_at ? Date.parse(w.created_at) : null });
       if (out.length >= r.total_count || r.workflows.length < 100) break;
     }
     return out;
@@ -8414,6 +8414,7 @@ Public repos work without a token (60 API calls/hour); private repos need action
 catchup --dispatch needs actions:write. Docs: https://blackman99.github.io/cronlag/docs/`;
 var SHORT = { d: "days", w: "workflow", f: "format", h: "help", v: "version", n: "count" };
 var BOOL = /* @__PURE__ */ new Set(["help", "version", "no-color", "dispatch", "lite", "json"]);
+var VALUED = /* @__PURE__ */ new Set(["days", "workflow", "format", "count", "fail-on", "late", "on-time", "token", "grace", "tz", "cron"]);
 function parseArgs(argv) {
   const flags = {};
   const pos = [];
@@ -8426,6 +8427,7 @@ function parseArgs(argv) {
     if (a.startsWith("-") && a.length > 1 && !/^-\d/.test(a)) {
       let [k, v] = a.replace(/^--?/, "").split(/=(.*)/s, 2);
       if (!a.startsWith("--")) k = SHORT[k] ?? k;
+      if (!BOOL.has(k) && !VALUED.has(k)) throw new UsageError(`unknown option ${a.split("=")[0]}`);
       if (BOOL.has(k)) {
         (flags[k] ??= []).push("true");
         continue;

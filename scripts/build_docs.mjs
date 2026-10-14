@@ -18,7 +18,7 @@ index: `
 <p>Since late August 2026 many repos see scheduled runs created hours late or not at all (<a href="https://github.com/orgs/community/discussions/206019">community #206019</a>, <a href="https://github.com/orgs/community/discussions/206134">#206134</a>, <a href="https://github.com/orgs/community/discussions/210037">#210037</a>). Every thread rebuilds the same table by hand: list the schedule runs, work out which cron slot each belongs to, compute the lag, count the gaps, then walk a checklist of causes. The Actions tab shows none of this — and the REST API doesn't even say which slot a run was for.</p>
 <h2>How it measures</h2>
 <ol>
-<li>Reads every workflow file on the default branch and its commit history, so each period is judged by the cron that was live then (cron changes mid-window are not "missed" slots).</li>
+<li>Reads every workflow file on the default branch and its commit history, so each period is judged by the cron that was live then (cron changes mid-window are not "missed" slots). Slots before GitHub first registered the workflow are not counted either, so a workflow added two days ago is judged on two days.</li>
 <li>Expands the cron with GitHub's rules: <code>* , - /</code>, month and day names, day-of-month/day-of-week OR rule, IANA <code>timezone:</code> with DST gaps moved to the next valid time.</li>
 <li>Lists runs with <code>event=schedule</code> and ties each to the closest preceding unclaimed slot within 24 hours.</li>
 <li>Lag = slot → run <em>creation</em>. That happens before any runner is involved, so it is the scheduler. Queue time (creation → start) is reported separately: that one is your runners.</li>
@@ -160,7 +160,7 @@ reference: `
   "unscheduled": [ "ci.yml", … ] }</code></pre>
 <p>Times are epoch milliseconds in <code>slots</code>, ISO strings at the top level. Durations are milliseconds.</p>
 <h2>Exit codes</h2>
-<p><code>0</code> ok (or nothing matched <code>--fail-on</code>) · <code>1</code> a workflow matched <code>--fail-on</code> · <code>2</code> usage error / invalid cron · <code>3</code> GitHub API error (rate limit, not found, auth).</p>
+<p><code>0</code> ok (or nothing matched <code>--fail-on</code>) · <code>1</code> a workflow matched <code>--fail-on</code> · <code>2</code> usage error (including an unknown option) / invalid cron · <code>3</code> GitHub API error (rate limit, not found, auth).</p>
 <h2>MCP tools</h2>
 <p><code>schedule_report</code> returns the Markdown report plus compact JSON; <code>catchup_plan</code> returns the steps <code>catchup</code> would take (never dispatches); <code>cron_explain</code> returns next fire times, shortest interval and the minute-0 flag. All are annotated <code>readOnlyHint: true</code>.</p>`,
 faq: `

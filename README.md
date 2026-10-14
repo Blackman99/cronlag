@@ -7,7 +7,7 @@
 
 Since late August 2026, `on: schedule` workflows across many repos have been created hours late or skipped entirely ([community #206019](https://github.com/orgs/community/discussions/206019), [#206134](https://github.com/orgs/community/discussions/206134), [#210037](https://github.com/orgs/community/discussions/210037)). The Actions tab doesn't show which cron slot a run was for, so every thread rebuilds the same table by hand: which slots ran, how late, which never ran, and whether it's your setup (disabled after 60 days, bad cron, minute 0, fork, wrong branch) or GitHub's scheduler.
 
-cronlag does that for every scheduled workflow in a repo. It reads the workflow file **and its commit history** (so a cron you changed mid-week isn't counted as missed), expands the cron with GitHub's rules (DOM/DOW OR rule, `timezone:`, DST gaps), ties each run to its slot, and reports lag from slot to run creation, before any runner is involved.
+cronlag does that for every scheduled workflow in a repo. It reads the workflow file **and its commit history** (so a cron you changed mid-week, or a workflow you added mid-week, isn't counted as missed), expands the cron with GitHub's rules (DOM/DOW OR rule, `timezone:`, DST gaps), ties each run to its slot, and reports lag from slot to run creation, before any runner is involved.
 
 ## Install
 

@@ -27,6 +27,8 @@ export interface WorkflowInfo {
   path: string;
   state: string;
   url: string;
+  /** when GitHub first registered this workflow (ms); no slot can fire before it */
+  created?: number | null;
 }
 
 export class GitHubError extends Error {
@@ -121,7 +123,7 @@ export class GitHub {
       const r = await this.json<{ workflows: Record<string, any>[]; total_count: number }>(
         `/repos/${full}/actions/workflows?per_page=100&page=${page}`,
       );
-      for (const w of r.workflows) out.push({ id: w.id, name: w.name, path: w.path, state: w.state, url: w.html_url });
+      for (const w of r.workflows) out.push({ id: w.id, name: w.name, path: w.path, state: w.state, url: w.html_url, created: w.created_at ? Date.parse(w.created_at) : null });
       if (out.length >= r.total_count || r.workflows.length < 100) break;
     }
     return out;

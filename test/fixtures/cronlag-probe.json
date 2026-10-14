@@ -1,0 +1,88 @@
+{
+ "repo": {
+  "fullName": "Blackman99/cronlag",
+  "defaultBranch": "main",
+  "fork": false,
+  "archived": false,
+  "private": false,
+  "pushedAt": 1791881044000,
+  "url": "https://github.com/Blackman99/cronlag"
+ },
+ "from": 1791337952804,
+ "now": 1791942752804,
+ "workflows": [
+  {
+   "id": 382984653,
+   "name": "probe",
+   "path": ".github/workflows/probe.yml",
+   "state": "active",
+   "url": "https://github.com/Blackman99/cronlag/blob/main/.github/workflows/probe.yml",
+   "created": 1791879971000,
+   "schedules": [
+    {
+     "cron": "17 * * * *",
+     "timezone": "UTC"
+    }
+   ],
+   "hasDispatch": true,
+   "fileChangedAt": 1791879963000,
+   "timeline": [
+    {
+     "since": 1791879963000,
+     "sha": "05f4afa87cbd27799b7d9a78483db62064a22e9f",
+     "schedules": [
+      {
+       "cron": "17 * * * *",
+       "timezone": "UTC"
+      }
+     ]
+    }
+   ],
+   "scheduleRuns": [
+    {
+     "id": 38434488756,
+     "number": 2,
+     "event": "schedule",
+     "status": "completed",
+     "conclusion": "success",
+     "created": 1791910542000,
+     "started": 1791910542000,
+     "url": "https://github.com/Blackman99/cronlag/actions/runs/38434488756"
+    },
+    {
+     "id": 38473518497,
+     "number": 3,
+     "event": "schedule",
+     "status": "completed",
+     "conclusion": "success",
+     "created": 1791928205000,
+     "started": 1791928205000,
+     "url": "https://github.com/Blackman99/cronlag/actions/runs/38473518497"
+    },
+    {
+     "id": 38494455491,
+     "number": 4,
+     "event": "schedule",
+     "status": "completed",
+     "conclusion": "success",
+     "created": 1791940358000,
+     "started": 1791940358000,
+     "url": "https://github.com/Blackman99/cronlag/actions/runs/38494455491"
+    }
+   ],
+   "dispatchRuns": [
+    {
+     "id": 38369262937,
+     "number": 1,
+     "event": "workflow_dispatch",
+     "status": "completed",
+     "conclusion": "success",
+     "created": 1791879984000,
+     "started": 1791879984000,
+     "url": "https://github.com/Blackman99/cronlag/actions/runs/38369262937"
+    }
+   ]
+  }
+ ],
+ "unscheduled": []
+}
