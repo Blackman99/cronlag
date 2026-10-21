@@ -7586,6 +7586,16 @@ function attribute(slotTimes, runs, t) {
   }
   return { slots, claimed, extra };
 }
+function offMinute(minutes, seed = 0) {
+  const picks = [7, 13, 17, 23, 37, 43, 47, 53];
+  if (minutes.length <= 1) return String(picks[seed % picks.length]);
+  const sorted = [...minutes].sort((a, b) => a - b);
+  const k = sorted[1] - sorted[0];
+  const evenly = sorted[0] === 0 && 60 % k === 0 && sorted.length === 60 / k && sorted.every((m, i) => m === i * k);
+  if (evenly && k > 1 && sorted.length >= 4) return `${1 + seed % (k - 1)}-59/${k}`;
+  const off = picks.map((p) => p % 60).find((o) => sorted.every((m) => (m + o) % 60 !== 0)) ?? 1;
+  return sorted.map((m) => (m + off) % 60).sort((a, b) => a - b).join(",");
+}
 function analyzeWorkflow(w, snap, t = DEFAULTS) {
   const findings = [];
   const file = w.path.split("/").pop() ?? w.path;
@@ -7675,7 +7685,7 @@ function analyzeWorkflow(w, snap, t = DEFAULTS) {
     headline = `median lag ${fmtDur(stats.lagMedian)}`;
   }
   if (verdict === "DROPPING" && (stats.lagMedian ?? 0) > t.lateMs) headline += `, and the rest ran a median ${fmtDur(stats.lagMedian)} late`;
-  if (stats.overdue && verdict !== "NOT FIRING") headline += ` \xB7 ${stats.overdue} overdue now`;
+  if (stats.overdue && verdict !== "NOT FIRING" && verdict !== "DISABLED") headline += ` \xB7 ${stats.overdue} overdue now`;
   if (w.state === "disabled_inactivity") {
     findings.push({
       level: "error",
@@ -7706,7 +7716,7 @@ function analyzeWorkflow(w, snap, t = DEFAULTS) {
         level: hurt ? "warn" : "info",
         code: "top-of-hour",
         message: `"${s.cron}" fires at minute 0, GitHub's busiest minute (its docs recommend another one).${hurt ? " Moving it can help, though off-peak schedules were also hit in the Aug\u2013Oct 2026 incidents." : ""}`,
-        fix: `cron: '${[String([7, 13, 17, 23, 37, 43, 47, 53][w.id % 8]), ...s.cron.split(/\s+/).slice(1)].join(" ")}'`
+        fix: `cron: '${[offMinute(s.parsed.minutes, w.id), ...s.cron.split(/\s+/).slice(1)].join(" ")}'`
       });
     }
     if (s.timezone !== "UTC") findings.push({ level: "info", code: "timezone", message: `"${s.cron}" is evaluated in ${s.timezone}.` });
@@ -7725,7 +7735,7 @@ function analyzeWorkflow(w, snap, t = DEFAULTS) {
       });
     }
   }
-  if (w.fileChangedAt && valid.length) {
+  if (w.fileChangedAt && valid.length && w.state === "active") {
     const since = slots.filter((s) => s.at > w.fileChangedAt && s.status !== "pending");
     const ranSince = w.scheduleRuns.some((r) => r.created > w.fileChangedAt);
     if (since.length >= 2 && !ranSince && now - since[0].at > 2 * HOUR) {
