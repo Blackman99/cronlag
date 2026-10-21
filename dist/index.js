@@ -8338,18 +8338,22 @@ function slotGlyph(s) {
 }
 var SEVERITY = { pending: 0, ontime: 1, late: 2, verylate: 3, overdue: 4, missed: 5 };
 function compactSlots(slots, max) {
-  if (slots.length <= max) return { slots, per: 1 };
+  if (slots.length <= max) return { marks: slots.map((slot) => ({ slot })), per: 1 };
   const per = Math.ceil(slots.length / max);
-  const out = [];
+  const marks = [];
   for (let i = 0; i < slots.length; i += per) {
-    out.push(
-      slots.slice(i, i + per).reduce((worst, s) => {
-        const d = SEVERITY[s.status] - SEVERITY[worst.status];
-        return d > 0 || d === 0 && (s.lagMs ?? 0) > (worst.lagMs ?? 0) ? s : worst;
-      })
-    );
+    const group = slots.slice(i, i + per);
+    const worst = group.reduce((w, s) => {
+      const d = SEVERITY[s.status] - SEVERITY[w.status];
+      return d > 0 || d === 0 && (s.lagMs ?? 0) > (w.lagMs ?? 0) ? s : w;
+    });
+    const missed = group.filter((s) => s.status === "missed").length;
+    marks.push(missed && missed < group.length && group.some((s) => s.run) ? { slot: worst, someMissed: true } : { slot: worst });
   }
-  return { slots: out, per };
+  return { marks, per };
+}
+function markGlyph(m) {
+  return m.someMissed ? { ch: "x", tone: "magenta" } : slotGlyph(m.slot);
 }
 function wrap(text, width) {
   const out = [];
@@ -8375,16 +8379,18 @@ function formatText(r, o) {
     return lines.join("\n");
   }
   const perLine = Math.max(20, width - 4);
+  let folded = false;
   for (const w of r.workflows) {
     lines.push("");
     const crons = w.crons.map((x) => `${x.cron}${x.timezone !== "UTC" ? ` (${x.timezone})` : ""}`).join("  |  ");
     lines.push(`${c("bold", w.file)}  ${c("dim", `"${w.name}"`)}  ${c("cyan", crons)}`);
     for (const ch of w.changes) lines.push(`  ${c("dim", `schedule changed ${ch.at.slice(0, 16).replace("T", " ")} \u2192 ${ch.crons.join(", ") || "(none)"}; earlier slots use the old cron`)}`);
     const strip = compactSlots(w.slots, perLine * 3);
-    for (let i = 0; i < strip.slots.length; i += perLine) {
-      const chunk = strip.slots.slice(i, i + perLine);
-      lines.push("  " + chunk.map((s2) => {
-        const g = slotGlyph(s2);
+    if (strip.per > 1) folded = true;
+    for (let i = 0; i < strip.marks.length; i += perLine) {
+      const chunk = strip.marks.slice(i, i + perLine);
+      lines.push("  " + chunk.map((m) => {
+        const g = markGlyph(m);
         return c(g.tone, g.ch);
       }).join(""));
     }
@@ -8406,16 +8412,16 @@ function formatText(r, o) {
     lines.push(c("dim", `${r.unscheduled.length} other workflow${r.unscheduled.length === 1 ? "" : "s"} without a schedule: ${r.unscheduled.slice(0, 8).join(", ")}${r.unscheduled.length > 8 ? ", \u2026" : ""}`));
   }
   lines.push("");
-  lines.push(c("dim", "bar = lag  \u2581\u22642m \u2582\u226410m \u2583\u226430m \u2584\u22641h \u2585\u22643h \u2586\u22646h \u2587\u226412h \u2588>12h   \u2715 no run   ? not yet"));
+  lines.push(c("dim", `bar = lag  \u2581\u22642m \u2582\u226410m \u2583\u226430m \u2584\u22641h \u2585\u22643h \u2586\u22646h \u2587\u226412h \u2588>12h   \u2715 no run${folded ? "   x some missed" : ""}   ? not yet`));
   return lines.join("\n");
 }
 function mdSlotRow(w) {
   const strip = compactSlots(w.slots, 240);
-  return "`" + strip.slots.map((s) => slotGlyph(s).ch).join("") + "`" + (strip.per > 1 ? ` <sub>each mark = worst of ${strip.per} slots</sub>` : "");
+  return "`" + strip.marks.map((m) => markGlyph(m).ch).join("") + "`" + (strip.per > 1 ? ` <sub>each mark = ${strip.per} slots: \u2715 none ran, x some missed, else the worst lag</sub>` : "");
 }
 function formatMarkdown(r) {
   const out = [];
-  out.push(`### cronlag \u2014 ${r.repo} (${windowLabel(r.from, r.now)}, UTC)`);
+  out.push(`### cronlag \u2014 ${r.repo} \xB7 ${windowLabel(r.from, r.now)} \xB7 UTC`);
   out.push("");
   if (!r.workflows.length) {
     out.push("No scheduled workflows found.");
@@ -8495,7 +8501,7 @@ function formatOrgText(r, o) {
 }
 function formatOrgMarkdown(r) {
   const out = [];
-  out.push(`### cronlag \u2014 org/${r.org} (${windowLabel(r.from, r.now)}, UTC)`);
+  out.push(`### cronlag \u2014 org/${r.org} \xB7 ${windowLabel(r.from, r.now)} \xB7 UTC`);
   out.push("");
   out.push(`${r.withSchedules} of ${r.scanned} repos have schedules${r.skippedArchived ? `; ${r.skippedArchived} archived skipped` : ""}.`);
   out.push("");
@@ -8715,6 +8721,7 @@ export {
   isLateHour,
   isValidTimeZone,
   localToInstant,
+  markGlyph,
   matchesFilter,
   minInterval,
   nextFires,

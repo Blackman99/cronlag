@@ -42,23 +42,37 @@ export function slotGlyph(s: Slot): { ch: string; tone: "green" | "yellow" | "re
 
 const SEVERITY: Record<string, number> = { pending: 0, ontime: 1, late: 2, verylate: 3, overdue: 4, missed: 5 };
 
+/** A strip mark: one slot, or (in a folded strip) the worst of several, flagged when only some of them missed. */
+export interface StripMark {
+  slot: Slot;
+  /** folded mark whose slots were partly missed and partly ran */
+  someMissed?: boolean;
+}
+
 /**
- * Long windows would print pages of glyphs; past `max` slots, each glyph stands for `per`
- * consecutive slots and shows the worst of them (a missed slot always wins, then the longest lag).
+ * Long windows would print pages of glyphs; past `max` slots, each mark stands for `per`
+ * consecutive slots. A mark is ✕ only when every slot in it missed; when some ran and some
+ * didn't it is a small x, so a thinned-out schedule doesn't read as "nothing ran". Otherwise it
+ * shows the worst lag.
  */
-export function compactSlots(slots: Slot[], max: number): { slots: Slot[]; per: number } {
-  if (slots.length <= max) return { slots, per: 1 };
+export function compactSlots(slots: Slot[], max: number): { marks: StripMark[]; per: number } {
+  if (slots.length <= max) return { marks: slots.map((slot) => ({ slot })), per: 1 };
   const per = Math.ceil(slots.length / max);
-  const out: Slot[] = [];
+  const marks: StripMark[] = [];
   for (let i = 0; i < slots.length; i += per) {
-    out.push(
-      slots.slice(i, i + per).reduce((worst, s) => {
-        const d = SEVERITY[s.status] - SEVERITY[worst.status];
-        return d > 0 || (d === 0 && (s.lagMs ?? 0) > (worst.lagMs ?? 0)) ? s : worst;
-      }),
-    );
+    const group = slots.slice(i, i + per);
+    const worst = group.reduce((w, s) => {
+      const d = SEVERITY[s.status] - SEVERITY[w.status];
+      return d > 0 || (d === 0 && (s.lagMs ?? 0) > (w.lagMs ?? 0)) ? s : w;
+    });
+    const missed = group.filter((s) => s.status === "missed").length;
+    marks.push(missed && missed < group.length && group.some((s) => s.run) ? { slot: worst, someMissed: true } : { slot: worst });
   }
-  return { slots: out, per };
+  return { marks, per };
+}
+
+export function markGlyph(m: StripMark): ReturnType<typeof slotGlyph> {
+  return m.someMissed ? { ch: "x", tone: "magenta" } : slotGlyph(m.slot);
 }
 
 export function wrap(text: string, width: number): string[] {
@@ -87,6 +101,7 @@ export function formatText(r: Report, o: TextOptions): string {
     return lines.join("\n");
   }
   const perLine = Math.max(20, width - 4);
+  let folded = false;
   for (const w of r.workflows) {
     lines.push("");
     const crons = w.crons.map((x) => `${x.cron}${x.timezone !== "UTC" ? ` (${x.timezone})` : ""}`).join("  |  ");
@@ -94,9 +109,10 @@ export function formatText(r: Report, o: TextOptions): string {
     for (const ch of w.changes) lines.push(`  ${c("dim", `schedule changed ${ch.at.slice(0, 16).replace("T", " ")} → ${ch.crons.join(", ") || "(none)"}; earlier slots use the old cron`)}`);
     // strip: at most 3 lines; longer windows fold several slots into one glyph
     const strip = compactSlots(w.slots, perLine * 3);
-    for (let i = 0; i < strip.slots.length; i += perLine) {
-      const chunk = strip.slots.slice(i, i + perLine);
-      lines.push("  " + chunk.map((s) => { const g = slotGlyph(s); return c(g.tone, g.ch); }).join(""));
+    if (strip.per > 1) folded = true;
+    for (let i = 0; i < strip.marks.length; i += perLine) {
+      const chunk = strip.marks.slice(i, i + perLine);
+      lines.push("  " + chunk.map((m) => { const g = markGlyph(m); return c(g.tone, g.ch); }).join(""));
     }
     const s = w.stats;
     if (w.slots.length) {
@@ -116,18 +132,18 @@ export function formatText(r: Report, o: TextOptions): string {
     lines.push(c("dim", `${r.unscheduled.length} other workflow${r.unscheduled.length === 1 ? "" : "s"} without a schedule: ${r.unscheduled.slice(0, 8).join(", ")}${r.unscheduled.length > 8 ? ", …" : ""}`));
   }
   lines.push("");
-  lines.push(c("dim", "bar = lag  ▁≤2m ▂≤10m ▃≤30m ▄≤1h ▅≤3h ▆≤6h ▇≤12h █>12h   ✕ no run   ? not yet"));
+  lines.push(c("dim", `bar = lag  ▁≤2m ▂≤10m ▃≤30m ▄≤1h ▅≤3h ▆≤6h ▇≤12h █>12h   ✕ no run${folded ? "   x some missed" : ""}   ? not yet`));
   return lines.join("\n");
 }
 
 function mdSlotRow(w: WorkflowReport): string {
   const strip = compactSlots(w.slots, 240);
-  return "`" + strip.slots.map((s) => slotGlyph(s).ch).join("") + "`" + (strip.per > 1 ? ` <sub>each mark = worst of ${strip.per} slots</sub>` : "");
+  return "`" + strip.marks.map((m) => markGlyph(m).ch).join("") + "`" + (strip.per > 1 ? ` <sub>each mark = ${strip.per} slots: ✕ none ran, x some missed, else the worst lag</sub>` : "");
 }
 
 export function formatMarkdown(r: Report): string {
   const out: string[] = [];
-  out.push(`### cronlag — ${r.repo} (${windowLabel(r.from, r.now)}, UTC)`);
+  out.push(`### cronlag — ${r.repo} · ${windowLabel(r.from, r.now)} · UTC`);
   out.push("");
   if (!r.workflows.length) {
     out.push("No scheduled workflows found.");
@@ -216,7 +232,7 @@ export function formatOrgText(r: OrgReport, o: TextOptions): string {
 
 export function formatOrgMarkdown(r: OrgReport): string {
   const out: string[] = [];
-  out.push(`### cronlag — org/${r.org} (${windowLabel(r.from, r.now)}, UTC)`);
+  out.push(`### cronlag — org/${r.org} · ${windowLabel(r.from, r.now)} · UTC`);
   out.push("");
   out.push(`${r.withSchedules} of ${r.scanned} repos have schedules${r.skippedArchived ? `; ${r.skippedArchived} archived skipped` : ""}.`);
   out.push("");

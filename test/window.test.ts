@@ -6,7 +6,7 @@ import { join } from "node:path";
 import { parseDays, parseSince, resolveWindow, windowLabel, MAX_WINDOW_DAYS, WindowError } from "../src/window.ts";
 import { GitHub, SETTLE_MS, type Run, type RunCache } from "../src/github.ts";
 import { DiskRunCache, defaultCacheDir } from "../src/cache.ts";
-import { compactSlots } from "../src/format.ts";
+import { compactSlots, markGlyph } from "../src/format.ts";
 import type { Slot } from "../src/analyze.ts";
 
 const HOUR = 3_600_000;
@@ -182,15 +182,20 @@ test("DiskRunCache round-trips, ignores corrupt files, and resolves the cache di
 });
 
 test("compactSlots keeps long strips short and never hides a missed slot", () => {
-  const s = (status: Slot["status"], lagMs = 0): Slot => ({ at: 0, cron: "", status, lagMs });
+  const run = { id: 1, number: 1, url: "", created: 0, conclusion: "success" };
+  const s = (status: Slot["status"], lagMs = 0): Slot => ({ at: 0, cron: "", status, lagMs, ...(status === "missed" ? {} : { run }) });
   const slots = [...Array.from({ length: 299 }, () => s("ontime", 60_000)), s("missed", 0), s("late", 30 * 60_000)];
   const c = compactSlots(slots, 100);
   assert.equal(c.per, 4);
-  assert.ok(c.slots.length <= 100);
-  assert.equal(c.slots.filter((x) => x.status === "missed").length, 1);
-  assert.deepEqual(compactSlots(slots.slice(0, 50), 100), { slots: slots.slice(0, 50), per: 1 });
+  assert.ok(c.marks.length <= 100);
+  const partly = c.marks.filter((m) => m.someMissed);
+  assert.equal(partly.length, 1, "the bucket with one miss among runs is an x, not hidden");
+  assert.equal(markGlyph(partly[0]).ch, "x");
+  assert.deepEqual(compactSlots(slots.slice(0, 50), 100).per, 1);
+  const allMissed = compactSlots([s("missed"), s("missed"), s("missed"), s("missed")], 2);
+  assert.ok(allMissed.marks.every((m) => !m.someMissed && markGlyph(m).ch === "✕"), "✕ only when every slot in the mark missed");
   const lag = compactSlots([s("ontime", 1), s("late", 20 * 60_000), s("ontime", 5)], 1);
-  assert.equal(lag.slots[0].status, "late");
+  assert.equal(lag.marks[0].slot.status, "late");
 });
 
 test("MCP schedule_report validates since/days before touching the API", async () => {
