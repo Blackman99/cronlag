@@ -8466,6 +8466,7 @@ function formatCatchup(steps, dispatched, color) {
   const c = (k, s) => color ? C[k] + s + C.reset : s;
   if (!steps.length) return "No scheduled workflows.";
   return steps.map((s) => {
+    if (s.error) return `${c("red", "FAILED    ")} ${s.file.padEnd(24)} ${s.reason} \u2014 dispatch failed: ${s.error}`;
     const tag = s.action === "dispatch" ? c("yellow", dispatched ? "DISPATCHED" : "WOULD RUN ") : s.action === "covered" ? c("green", "COVERED   ") : c("dim", "SKIP      ");
     return `${tag} ${s.file.padEnd(24)} ${s.reason}`;
   }).join("\n");
