@@ -76,7 +76,8 @@ jobs:
           node --input-type=module -e "const w = (await import(process.argv[1])).default; await w.scheduled({ cron: '4,14,24,34,44,54 * * * *', scheduledTime: Date.now() }, { GITHUB_TOKEN: process.env.GITHUB_TOKEN, DRY_RUN: '1' })" "file://$RUNNER_TEMP/cf/worker.mjs"
           node dist/cli.js worker ${{ github.repository }} -t systemd --every 15m -o "$RUNNER_TEMP/sd"
           sudo systemd-analyze verify --man=no "$RUNNER_TEMP"/sd/*.service "$RUNNER_TEMP"/sd/*.timer 2>&1 | tee verify.log
-          test ! -s verify.log
+          # the runner image's own units warn too; only our units' lines count
+          ! grep -F cronlag-catchup verify.log
       - name: MCP stdio smoke against the live API
         run: |
           printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}' \
