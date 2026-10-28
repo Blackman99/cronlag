@@ -2,7 +2,7 @@ import { analyze, DAY, DEFAULTS, fmtDur, guard, HOUR, MIN, type Report, type Thr
 import { collect } from "./collect.js";
 import { runCatchup } from "./catchup.js";
 import { CronError, nextFires, parseCron, minInterval } from "./cron.js";
-import { formatCatchup, formatMarkdown, formatOrgMarkdown, formatOrgText, formatText } from "./format.js";
+import { formatCatchup, formatMarkdown, formatOrgMarkdown, formatOrgText, formatText, wrap } from "./format.js";
 import { exitForOrg, scanOrg } from "./org.js";
 import { GitHub, GitHubError } from "./github.js";
 import { runMcp } from "./mcp.js";
@@ -360,10 +360,13 @@ async function workerCmd(a: Args): Promise<number> {
 function workerSummary(spec: WorkerSpec, sel: Selection, o: { color: boolean; wrote?: string[]; outDir?: string }): string {
   const C = { dim: "\x1b[2m", bold: "\x1b[1m", green: "\x1b[32m", yellow: "\x1b[33m", cyan: "\x1b[36m", reset: "\x1b[0m" };
   const c = (k: keyof typeof C, s: string) => (o.color ? C[k] + s + C.reset : s);
+  const width = Math.max(60, Math.min(process.stderr.columns || 100, 120));
   const what = spec.target === "cloudflare" ? "Cloudflare Worker" : spec.target === "systemd" ? "systemd timer + service" : "crontab line";
-  const when = spec.target === "systemd" ? spec.tick.onCalendar.replace(/ UTC$/, "") : spec.tick.cron;
+  const when = spec.target === "systemd" ? `OnCalendar=${spec.tick.onCalendar}` : `${spec.tick.cron} UTC`;
   const L: string[] = [];
-  L.push(`${c("bold", "cronlag worker")}  ${spec.repo} ${c("dim", "→")} ${what}  ${c("dim", `· every ${spec.tick.label}: ${when} UTC · grace ${fmtDur(spec.graceMs)}`)}`);
+  L.push(`${c("bold", "cronlag worker")}  ${spec.repo} ${c("dim", "→")} ${what}`);
+  L.push(c("dim", `  every ${spec.tick.label} (${when}) · grace ${fmtDur(spec.graceMs)} · latest due slot, once`));
+  L.push("");
   const w = Math.max(...spec.workflows.map((x) => x.file.length));
   const cw = Math.max(...spec.workflows.map((x) => x.schedules.map((s) => s.cron).join(" · ").length));
   for (const x of spec.workflows) {
@@ -373,25 +376,31 @@ function workerSummary(spec: WorkerSpec, sel: Selection, o: { color: boolean; wr
   const ns = notes(spec, sel);
   if (ns.length) {
     L.push("");
-    for (const n of ns) L.push(`  ${n.level === "warn" ? c("yellow", "!") : c("dim", "·")} ${n.text}`);
+    for (const n of ns) {
+      wrap(n.text, width - 4).forEach((ln, i) => L.push(`  ${i ? " " : n.level === "warn" ? c("yellow", "!") : c("dim", "·")} ${n.level === "info" ? c("dim", ln) : ln}`));
+    }
   }
   L.push("");
   if (o.wrote) {
     for (const p of o.wrote) L.push(`  ${c("green", "wrote")} ${p}`);
     L.push("");
   }
-  const d = o.outDir ? (o.outDir === "." ? "" : `cd ${o.outDir} && `) : "";
-  const save = !o.wrote;
+  const steps: string[] = [];
+  const name = slug(spec.repo);
+  const cd = o.outDir && o.outDir !== "." ? `cd ${o.outDir} && ` : "";
   if (spec.target === "cloudflare") {
-    if (save) L.push(`  next: save as worker.js (or use -o <dir> for worker.js + wrangler.toml), then`);
-    L.push(`  ${save ? "     " : "next:"} ${d}wrangler secret put GITHUB_TOKEN && wrangler deploy   ${c("dim", "# token: Actions read+write on this repo")}`);
+    if (!o.wrote) steps.push("save it as worker.js (-o <dir> also writes wrangler.toml)");
+    steps.push(`${cd}wrangler secret put GITHUB_TOKEN && wrangler deploy`);
+    steps.push(c("dim", "# token: fine-grained, this repo only, Actions read and write"));
   } else if (spec.target === "systemd") {
-    if (save) L.push(`  next: -o <dir> writes both unit files; copy them to /etc/systemd/system/, then`);
-    else L.push(`  next: sudo cp ${o.outDir}/${slug(spec.repo)}.{service,timer} /etc/systemd/system/, put the token in /etc/cronlag/${slug(spec.repo)}.env, then`);
-    L.push(`        sudo systemctl daemon-reload && sudo systemctl enable --now ${slug(spec.repo)}.timer`);
+    steps.push(o.wrote ? `sudo cp ${o.outDir}/${name}.{service,timer} /etc/systemd/system/` : "-o <dir> writes both unit files; copy them to /etc/systemd/system/");
+    steps.push(`put GITHUB_TOKEN=… in /etc/cronlag/${name}.env ${c("dim", "(root only, chmod 600)")}`);
+    steps.push(`sudo systemctl daemon-reload && sudo systemctl enable --now ${name}.timer`);
   } else {
-    L.push(`  next: put \`export GITHUB_TOKEN=…\` in ~/.config/cronlag/${slug(spec.repo)}.env (chmod 600), then add the lines with crontab -e`);
+    steps.push(`put \`export GITHUB_TOKEN=…\` in ~/.config/cronlag/${name}.env ${c("dim", "(chmod 600)")}`);
+    steps.push(`crontab -e and paste the lines${o.wrote ? ` from ${o.wrote[0]}` : ""}`);
   }
+  steps.forEach((st, i) => L.push(`  ${i ? "     " : c("bold", "next:")} ${st}`));
   return L.join("\n");
 }
 

@@ -390,7 +390,7 @@ export function notes(spec: WorkerSpec, sel: Selection): { level: "warn" | "info
   if (unguarded.length) {
     const who =
       unguarded.length === 1 ? `${unguarded[0].file} has no` : unguarded.length === spec.workflows.length ? "none of these workflows has a" : `${list(unguarded)} have no`;
-    out.push({ level: "warn", text: `${who} \`mode: guard\` step yet: if GitHub's late run still arrives after a catch-up, that slot runs twice. Add the guard job: ${DOCS}#guard` });
+    out.push({ level: "warn", text: `${who} \`mode: guard\` step yet, so if GitHub's late run still arrives after a catch-up, that slot runs twice. Add the guard job: ${DOCS}#guard` });
   }
   for (const w of spec.workflows) {
     if (w.state !== "active") out.push({ level: "warn", text: `${w.file} is ${w.state.replace(/_/g, " ")}: catch-up skips it until you enable it again` });

@@ -439,7 +439,7 @@ function analyzeWorkflow(w, snap, t = DEFAULTS) {
       level: "info",
       code: "scheduler-side",
       message: `Lag is measured from the cron slot to run creation, before any runner is involved \u2014 that part is GitHub's scheduler, not your jobs.` + (dq !== null && w.dispatchRuns.length ? ` Manual runs of this workflow start ${dq < 6e4 ? "within seconds of" : fmtDur(dq) + " after"} creation (n=${w.dispatchRuns.length}), so runners are fine.` : ""),
-      fix: w.hasDispatch ? `run \`cronlag catchup ${snap.repo.fullName} --dispatch\` from an external cron every 10\u201315 min` : void 0
+      fix: w.hasDispatch ? `catch up from outside GitHub: \`cronlag worker ${snap.repo.fullName}\`` : void 0
     });
   }
   if (stats.queueMedian !== null && stats.queueMedian > 5 * MIN) {
@@ -9265,7 +9265,7 @@ function notes(spec, sel) {
   const unguarded = spec.workflows.filter((w) => !w.guarded);
   if (unguarded.length) {
     const who = unguarded.length === 1 ? `${unguarded[0].file} has no` : unguarded.length === spec.workflows.length ? "none of these workflows has a" : `${list(unguarded)} have no`;
-    out.push({ level: "warn", text: `${who} \`mode: guard\` step yet: if GitHub's late run still arrives after a catch-up, that slot runs twice. Add the guard job: ${DOCS}#guard` });
+    out.push({ level: "warn", text: `${who} \`mode: guard\` step yet, so if GitHub's late run still arrives after a catch-up, that slot runs twice. Add the guard job: ${DOCS}#guard` });
   }
   for (const w of spec.workflows) {
     if (w.state !== "active") out.push({ level: "warn", text: `${w.file} is ${w.state.replace(/_/g, " ")}: catch-up skips it until you enable it again` });
@@ -9588,10 +9588,13 @@ ${f.text}`).join("\n"));
 function workerSummary(spec, sel, o) {
   const C2 = { dim: "\x1B[2m", bold: "\x1B[1m", green: "\x1B[32m", yellow: "\x1B[33m", cyan: "\x1B[36m", reset: "\x1B[0m" };
   const c = (k, s) => o.color ? C2[k] + s + C2.reset : s;
+  const width = Math.max(60, Math.min(process.stderr.columns || 100, 120));
   const what = spec.target === "cloudflare" ? "Cloudflare Worker" : spec.target === "systemd" ? "systemd timer + service" : "crontab line";
-  const when = spec.target === "systemd" ? spec.tick.onCalendar.replace(/ UTC$/, "") : spec.tick.cron;
+  const when = spec.target === "systemd" ? `OnCalendar=${spec.tick.onCalendar}` : `${spec.tick.cron} UTC`;
   const L = [];
-  L.push(`${c("bold", "cronlag worker")}  ${spec.repo} ${c("dim", "\u2192")} ${what}  ${c("dim", `\xB7 every ${spec.tick.label}: ${when} UTC \xB7 grace ${fmtDur(spec.graceMs)}`)}`);
+  L.push(`${c("bold", "cronlag worker")}  ${spec.repo} ${c("dim", "\u2192")} ${what}`);
+  L.push(c("dim", `  every ${spec.tick.label} (${when}) \xB7 grace ${fmtDur(spec.graceMs)} \xB7 latest due slot, once`));
+  L.push("");
   const w = Math.max(...spec.workflows.map((x) => x.file.length));
   const cw = Math.max(...spec.workflows.map((x) => x.schedules.map((s) => s.cron).join(" \xB7 ").length));
   for (const x of spec.workflows) {
@@ -9601,25 +9604,31 @@ function workerSummary(spec, sel, o) {
   const ns = notes(spec, sel);
   if (ns.length) {
     L.push("");
-    for (const n of ns) L.push(`  ${n.level === "warn" ? c("yellow", "!") : c("dim", "\xB7")} ${n.text}`);
+    for (const n of ns) {
+      wrap(n.text, width - 4).forEach((ln, i) => L.push(`  ${i ? " " : n.level === "warn" ? c("yellow", "!") : c("dim", "\xB7")} ${n.level === "info" ? c("dim", ln) : ln}`));
+    }
   }
   L.push("");
   if (o.wrote) {
     for (const p of o.wrote) L.push(`  ${c("green", "wrote")} ${p}`);
     L.push("");
   }
-  const d = o.outDir ? o.outDir === "." ? "" : `cd ${o.outDir} && ` : "";
-  const save = !o.wrote;
+  const steps = [];
+  const name = slug(spec.repo);
+  const cd = o.outDir && o.outDir !== "." ? `cd ${o.outDir} && ` : "";
   if (spec.target === "cloudflare") {
-    if (save) L.push(`  next: save as worker.js (or use -o <dir> for worker.js + wrangler.toml), then`);
-    L.push(`  ${save ? "     " : "next:"} ${d}wrangler secret put GITHUB_TOKEN && wrangler deploy   ${c("dim", "# token: Actions read+write on this repo")}`);
+    if (!o.wrote) steps.push("save it as worker.js (-o <dir> also writes wrangler.toml)");
+    steps.push(`${cd}wrangler secret put GITHUB_TOKEN && wrangler deploy`);
+    steps.push(c("dim", "# token: fine-grained, this repo only, Actions read and write"));
   } else if (spec.target === "systemd") {
-    if (save) L.push(`  next: -o <dir> writes both unit files; copy them to /etc/systemd/system/, then`);
-    else L.push(`  next: sudo cp ${o.outDir}/${slug(spec.repo)}.{service,timer} /etc/systemd/system/, put the token in /etc/cronlag/${slug(spec.repo)}.env, then`);
-    L.push(`        sudo systemctl daemon-reload && sudo systemctl enable --now ${slug(spec.repo)}.timer`);
+    steps.push(o.wrote ? `sudo cp ${o.outDir}/${name}.{service,timer} /etc/systemd/system/` : "-o <dir> writes both unit files; copy them to /etc/systemd/system/");
+    steps.push(`put GITHUB_TOKEN=\u2026 in /etc/cronlag/${name}.env ${c("dim", "(root only, chmod 600)")}`);
+    steps.push(`sudo systemctl daemon-reload && sudo systemctl enable --now ${name}.timer`);
   } else {
-    L.push(`  next: put \`export GITHUB_TOKEN=\u2026\` in ~/.config/cronlag/${slug(spec.repo)}.env (chmod 600), then add the lines with crontab -e`);
+    steps.push(`put \`export GITHUB_TOKEN=\u2026\` in ~/.config/cronlag/${name}.env ${c("dim", "(chmod 600)")}`);
+    steps.push(`crontab -e and paste the lines${o.wrote ? ` from ${o.wrote[0]}` : ""}`);
   }
+  steps.forEach((st, i) => L.push(`  ${i ? "     " : c("bold", "next:")} ${st}`));
   return L.join("\n");
 }
 function isEntryPoint() {
